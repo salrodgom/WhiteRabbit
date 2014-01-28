@@ -3,36 +3,36 @@ PROGRAM main
 ! USE OMP_LIB
  USE vector_module
  IMPLICIT NONE
- INTEGER                         :: n_atoms = 0
- INTEGER                         :: n_T = 0
- REAL                            :: r1  = 1.0
- REAL                            :: r2  = 1.99
- INTEGER                         :: IERR
- INTEGER                         :: i,j,k,l,p,m,o,n_ring,n,h
- INTEGER                         :: ei_atoms(16),six_atoms(14),fou_atoms(8)
- REAL, PARAMETER                 :: pi=ACOS(-1.0)
- REAL                            :: atom(3),ouratom(3),dist,distance,a_ring,b_ring,delta,dist_(1:3)
- REAL                            :: cell_0(6),q,r,s,rv(3,3),vr(3,3),delta_ring,make_distance_car_cm
- REAL                            :: x1,x2,x3,average(3)!,centres(3,8),dist_(1:3)!,pointout_strgline(3)
- REAL                            :: image(1:3,1:27)!,image_car(1:3,1:27),medio(1:3,1:27)
- REAL, ALLOCATABLE               :: xcryst(:,:),xinbox(:,:)
- REAL                            :: xcrys_in_ring(1:3,0:16),xinbox_in_ring(1:3,0:16),d(1:16),d0(1:16),e(1:16)
- INTEGER, ALLOCATABLE            :: id(:),adj(:,:),O_ident(:)
- CHARACTER (LEN=1), ALLOCATABLE  :: adj_char(:,:)
- CHARACTER (LEN=3)               :: input_type = "PDB"
- CHARACTER (LEN=6)               :: atomc
- CHARACTER (LEN=80)              :: line,string
- CHARACTER (LEN=4)               :: mol
- CHARACTER (LEN=5)               :: model
- CHARACTER (LEN=6)               :: charct(6)
- CHARACTER (LEN=4)               :: typ(3)
- CHARACTER (LEN=2)               :: t1,t2,t3,t4
- CHARACTER (LEN=4), ALLOCATABLE  :: label(:,:)
- CHARACTER (LEN=10)              :: spacegroup = "P1"
- LOGICAL                         :: compute_distance,FLAG_stop
- LOGICAL                         :: FLAG = .true.
- INTEGER                         :: CHUNK,NTHREADS,TID
- TYPE (vector)                   :: o0,u,ou,v,ov
+ INTEGER            :: n_atoms = 0
+ INTEGER            :: n_T = 0
+ REAL               :: r1  = 1.0
+ REAL               :: r2  = 2.2
+ INTEGER            :: IERR
+ INTEGER            :: i,j,k,l,p,m,o,n_ring,n,h
+ INTEGER            :: ei_atoms(16),six_atoms(14),fou_atoms(8)
+ REAL, PARAMETER    :: pi=ACOS(-1.0)
+ REAL               :: atom(3),ouratom(3),dist,distance,a_ring,b_ring,delta,dist_(1:3),a_average
+ REAL               :: cell_0(6),q,r,s,rv(3,3),vr(3,3),delta_ring,make_distance_car_cm,volume
+ REAL               :: x1,x2,x3,average(3)!,centres(3,8),dist_(1:3)!,pointout_strgline(3)
+ REAL               :: image(1:3,1:27)!,image_car(1:3,1:27),medio(1:3,1:27)
+ REAL, ALLOCATABLE  :: xcryst(:,:),xinbox(:,:)
+ REAL               :: xcrys_in_ring(1:3,0:16),xinbox_in_ring(1:3,0:16),d(1:16),d0(1:16),e(1:16)
+ INTEGER, ALLOCATABLE  :: id(:),adj(:,:),O_ident(:)
+ CHARACTER (LEN=1), ALLOCATABLE :: adj_char(:,:)
+ CHARACTER (LEN=3)  :: input_type = "PDB"
+ CHARACTER (LEN=6)  :: atomc
+ CHARACTER (LEN=80) :: line,string
+ CHARACTER (LEN=4)  :: mol
+ CHARACTER (LEN=5)  :: model
+ CHARACTER (LEN=6)  :: charct(6)
+ CHARACTER (LEN=4)  :: typ(3)
+ CHARACTER (LEN=2)  :: t1,t2,t3,t4
+ CHARACTER (LEN=4), ALLOCATABLE :: label(:,:)
+ CHARACTER (LEN=10) :: spacegroup = "P1"
+ LOGICAL            :: compute_distance,FLAG_stop
+ LOGICAL            :: FLAG = .true.
+! INTEGER            :: CHUNK,NTHREADS,TID
+ TYPE (vector)      :: o0,u,ou,v,ov
 !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(TID)
 ! TID=OMP_GET_THREAD_NUM()
 ! IF(TID==0)THEN
@@ -90,8 +90,11 @@ PROGRAM main
  ALLOCATE(LABEL(n_atoms,2)      ,STAT=IERR)
  IF(IERR/=0) STOP '[ERROR] variables sin alicatar en memoria.'
 ! }}
- IF(input_type=='PDB'.or.input_type=='ARC')THEN
-     OPEN(999,FILE='out.pdb')
+ IF (input_type=='PDB') OPEN(999,FILE='out.pdb')
+ IF (input_type=='ARC') THEN
+    OPEN(909,FILE='out.pdb')
+    !WRITE(909,'(A)')'!BIOSYM archive 2'
+    !WRITE(909,'(A)')'PBC=ON'
  ENDIF
  IF (compute_distance) OPEN(888,file='8-distance.txt')
  IF (compute_distance) OPEN(666,file='6-distance.txt')
@@ -108,12 +111,13 @@ PROGRAM main
     cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
    spacegroup = "P1"
    CALL cell(rv,vr,cell_0) ! crea la matriz H para cambios entre coordenadas y su inversa.
+   a_average = a_average + ((volume(rv)/8.0)**(1.0/3.0))/real(n_T)
    WRITE(999,'(A6,3f9.3,3f7.2,1x,a10)') &
     'CRYST1',cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
    average(1)=0.0
    average(2)=0.0
    average(3)=0.0
-   read_coor_PDB: DO i=1,n_atoms
+! {{ comentarios de RASPA sobre la lectura y escritura de archivos PDB }}
 ! PDB file-format
 !  1 -  6        Record name     "ATOM  "
 !  7 - 11        Integer         serial        Atom serial number
@@ -136,7 +140,6 @@ PROGRAM main
 ! 77 - 78        LString(2)      element       Element symbol, right-justified
 ! 79 - 80        LString(2)      charge        Charge on the atom
 ! Typical Format:  (6A1,I5,1X,A4,A1,A3,1X,A1,I4,A1,3X,3F8.3,2F6.2,6X,2A4)
-
 ! Cols.  1-6    Record name "CRYST1"
 !      7-15    a (Angstrom)
 !     16-24    b (Angstrom)
@@ -155,14 +158,12 @@ PROGRAM main
 ! xfrac = S11X + S12Y + S13Z + U1
 ! yfrac = S21X + S22Y + S23Z + U2
 ! zfrac = S31X + S32Y + S33Z + U3
-
 ! Col. 1-6     Record name SCALEn
 !  1 -  6       Record name    "SCALEn" (n=1, 2, or 3)
 ! 11 - 20       Real(10.6)     s[n][1]                         
 ! 21 - 30       Real(10.6)     s[n][2]                       
 ! 31 - 40       Real(10.6)     s[n][3]                         
 ! 46 - 55       Real(10.5)     u[n] 
-
 ! Record:   MODEL
 ! Contains:    the model serial number when a single coordinate entry contains multiple structures
 ! # Notes:     Models are numbered sequentially beginning with 1.
@@ -173,13 +174,13 @@ PROGRAM main
 ! that are present in the individual entry.
 !  1 -  6       Record name    "MODEL "                                            
 ! 11 - 14       Integer        Model serial number
-
 ! Record: ENDMDL
 ! Contains:    these records are paired with MODEL records to group individual structures found in a coordinate entry
 ! # Notes:     MODEL/ENDMDL records are used only when more than one structure
 ! is presented in the entry, or if there are more than 99,999 atoms.
 ! # Every MODEL record has an associated ENDMDL record. 
 !  1 -  6         Record name      "ENDMDL"
+   read_coor_PDB: DO i=1,n_atoms
     READ(100, '(A)', iostat = IERR ) line
     IF (IERR/=0) EXIT read_coor_PDB          ! formatos de lectura para PDB 
        atomc = line(1:6)                     ! leemos
@@ -194,6 +195,21 @@ PROGRAM main
        average(j)=average(j)+xinbox(j,id(i))/real(n_atoms)
     END FORALL
    ENDDO read_coor_PDB
+! { metodo antiguo, hay errores cuando los valores solapan en el espacio de las columnas del fichero }}
+!   read_coor_PDB: DO i=1,n_atoms
+!    READ(100, '(A)', iostat = IERR ) line
+!    IF (IERR/=0) EXIT read_coor_PDB
+!    READ(line,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
+!     atomc,id(i),typ(1),mol,m,x1,x2,x3,q,r,typ(2)
+!    xinbox(1,id(i))=x1
+!    xinbox(2,id(i))=x2
+!    xinbox(3,id(i))=x3
+!    label(id(i),1)=typ(1)
+!    label(id(i),2)=typ(2)
+!    FORALL ( j = 1:3 )
+!       average(j)=average(j)+xinbox(j,id(i))/real(n_atoms)
+!    END FORALL
+!   ENDDO read_coor_PDB
    print_coor_PDB: DO i=1,n_atoms ! definimos las coordenadas cartesianas
     FORALL ( j=1:3 )
        xinbox(j,id(i)) = xinbox(j,id(i)) - average(j)
@@ -208,9 +224,11 @@ PROGRAM main
     typ(2)=label(id(i),2)
     WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
      atomc,id(i),typ(1),mol,m,x1,x2,x3,q,r,typ(2)
+    !WRITE(909,*) typ(1),typ(2),xcryst(1,id(i)),xcryst(2,id(i)),xcryst(3,id(i))
    ENDDO print_coor_PDB
    READ (100,'(A)') line
    WRITE(999,'(A)') line
+   call escritura_cif(xcryst,n_atoms,LABEL,cell_0,rv)
 ! {{ procedimiento ante archivo ARC }}
   ELSE IF (input_type=='ARC') THEN
    READ(101,'(A)', iostat = IERR ) line
@@ -287,7 +305,7 @@ PROGRAM main
         k=k+adj(i,j)
      ENDDO
      xcryst(0,i)=k
-     IF(k/=0.0.and.k/=2.0.and.k/=4.0) WRITE(6,'(3A,I2)') '[OJO] Connectivity of ',label(i,1),'is ',k
+!     IF(k/=0.0.and.k/=2.0.and.k/=4.0) WRITE(6,'(3A,I2)') '[OJO] Connectivity of ',label(i,1),'is ',k
    ENDDO conectivity
    WRITE(6,'(A)')'[loops] Connectivity between nodes [Degree]:'
    IF(compute_distance.eqv..false.) WRITE(*,'(1000(I1))')(int(xcryst(0,k)),k=1,n_atoms)
@@ -299,9 +317,9 @@ PROGRAM main
   distancias_4: do
     READ(440,*,IOSTAT=IERR)( fou_atoms(j), j=1,8 )
     IF(IERR/=0) EXIT distancias_4
-    d(1:8)=0.0
-    d0(1:8)=0.0
-    e(1:8)=0.0
+    d(1:16)=0.0
+    d0(1:16)=0.0
+    e(1:16)=0.0
     n_ring=n_ring+1
 ! {{ coloco todos los atomos en el mismo sistema de referencia y calculo
 ! las distancias sin PBC }}
@@ -351,9 +369,33 @@ PROGRAM main
       ou = vector_sub(u,o0)
       ov = vector_sub(v,o0)
       x1=x1+0.5*absvec(cross(ou,ov))
-      WRITE(444,*)p,n_ring,x1
     ENDDO area_8
 ! }}
+    atom1_8: DO j=1,8
+     atom2_8: DO l=1,8
+      IF( (j/=l).and. &
+       ((label(fou_atoms(j),1)==" O  ".or.label(fou_atoms(j),1)=="O   ").and. &
+        (label(fou_atoms(l),1)==" O  ".or.label(fou_atoms(l),1)=="O   "))) THEN
+       FORALL ( k=1:3 )
+         atom(k)    = xcrys_in_ring(k,j) !xcryst(k,ei_atoms(j))
+         ouratom(k) = xcrys_in_ring(k,l) !xcryst(k,ei_atoms(l))
+       END FORALL
+       d0(l)=DISTANCE(atom,ouratom,rv)
+      ELSE
+       d0(l)=0.0
+      ENDIF
+     ENDDO atom2_8
+     d(j)=MAXVAL(d0) ! de cada vuelta cojo el diametor mas grande
+     e(j)=d(j)
+     IF(d(j)<=0.001) d(j)=9999.0
+    ENDDO atom1_8
+    limpia_8: DO j=9,16 ! valores no validos de d.
+       d(j)=9999.0      ! los relleno con infinitos
+    ENDDO limpia_8       
+    b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
+    a_ring=MAXVAL(e)
+    delta_ring = 0.5*abs( b_ring - a_ring )
+    WRITE(444,*)p,n_ring,b_ring,delta_ring,x1,a_ring,b_ring
    ENDDO distancias_4
 ! }}
 ! {{ propiedades de los anillos de 12.
@@ -361,9 +403,9 @@ PROGRAM main
    distancias_6: do
     READ(660,*,IOSTAT=IERR)( six_atoms(j), j=1,12 )
     IF(IERR/=0) EXIT distancias_6
-    d(1:12)=0.0
-    e(1:12)=0.0
-    d0(1:12)=0.0
+    d(1:16)=0.0
+    e(1:16)=0.0
+    d0(1:16)=0.0
     n_ring=n_ring+1
     elijo_pivote_12: FORALL ( k=1:3 , j=1:12 )
        xcrys_in_ring(k,j) = xcryst(k,six_atoms(j))
@@ -409,9 +451,34 @@ PROGRAM main
       ou = vector_sub(u,o0)
       ov = vector_sub(v,o0)
       x1=x1+0.5*absvec(cross(ou,ov))
-      WRITE(666,*)p,n_ring,x1
     ENDDO area_12
 ! }}
+! {{ 
+    atom1_12: DO j=1,12
+      atom2_12: DO l=1,12
+       IF( (j/=l).and. &
+        ((label(six_atoms(j),1)==" O  ".or.label(six_atoms(j),1)=="O   ").and. &
+         (label(six_atoms(l),1)==" O  ".or.label(six_atoms(l),1)=="O   "))) THEN
+        FORALL ( k=1:3 )
+         atom(k)    = xcrys_in_ring(k,j) !xcryst(k,ei_atoms(j))
+         ouratom(k) = xcrys_in_ring(k,l) !xcryst(k,ei_atoms(l))
+        END FORALL
+        d0(l)=DISTANCE(atom,ouratom,rv)
+       ELSE
+        d0(l)=0.0
+       ENDIF
+      ENDDO atom2_12
+       d(j)=MAXVAL(d0) ! de cada vuelta cojo el diametor mas grande
+       e(j)=d(j)
+       IF(d(j)<=0.001) d(j)=9999.0
+     ENDDO atom1_12
+     limpia_12: DO j=13,16
+       d(j) = 9999.0
+     END DO limpia_12
+     b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
+     a_ring=MAXVAL(e)
+     delta_ring = 0.5*abs( a_ring - b_ring )
+     WRITE(666,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_6
 ! }}
 ! {{ calculo propiedades de los anillos de 16.
@@ -492,7 +559,7 @@ PROGRAM main
      b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
      a_ring=MAXVAL(e)
      delta_ring=0.5*abs(b_ring-a_ring)
-     WRITE(888,*)p,n_ring,x1,b_ring,delta_ring
+     WRITE(888,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_8
 ! }}
 ! {{ rebobino los ficheros de los anillos }}
@@ -510,6 +577,7 @@ PROGRAM main
  CLOSE( 100 )
  CLOSE( 999 )
  CLOSE( 555 )
+ WRITE(6,'(A,1x,f10.5)')'cell average: .', a_average
  IF (compute_distance.EQV..false.) STOP "PASO 1"
  IF (compute_distance.EQV..true.) STOP "PASO 2"
 END PROGRAM main
@@ -599,8 +667,8 @@ END SUBROUTINE
 REAL FUNCTION DISTANCE(atom,ouratom,rv)
  IMPLICIT NONE
  INTEGER :: j
- REAL    :: atom(3),ouratom(3),per_atom(3),dist(3),o_atom(3),o_ouratom(3)
- REAL    :: rv(3,3)
+ REAL :: atom(3),ouratom(3),per_atom(3),dist(3),o_atom(3),o_ouratom(3)
+ REAL :: rv(3,3)
  FORALL ( j=1:3 )
    o_ouratom(j) = rv(j,1)*ouratom(1)  + rv(j,2)*ouratom(2)  + rv(j,3)*ouratom(3)
    o_atom(j)    = rv(j,1)*atom(1) + rv(j,2)*atom(2) + rv(j,3)*atom(3)
@@ -612,8 +680,8 @@ END FUNCTION
 REAL FUNCTION make_distance_car_cm(atom,ouratom,rv,medio)
  IMPLICIT NONE
  INTEGER :: j
- REAL    :: atom(3),ouratom(3),medio(3),dist(3),o_atom(3),o_ouratom(3)
- REAL    :: rv(3,3)
+ REAL :: atom(3),ouratom(3),medio(3),dist(3),o_atom(3),o_ouratom(3)
+ REAL :: rv(3,3)
  FORALL ( j=1:3 )
    o_ouratom(j) = rv(j,1)*ouratom(1)  + rv(j,2)*ouratom(2)  + rv(j,3)*ouratom(3)
    o_atom(j)    = rv(j,1)*atom(1) + rv(j,2)*atom(2) + rv(j,3)*atom(3)
@@ -624,7 +692,7 @@ END FUNCTION
 !
 SUBROUTINE write_grafo(A,N,ident,U)
  integer, intent(in) :: N,A(N,N),U,ident(N)
- integer             :: X,Y
+ integer :: X,Y
  OPEN(U,FILE="grafo.red")
  nodos: DO X=1,N
    DO Y=X+1,N
@@ -663,179 +731,3 @@ SUBROUTINE ESCRITURA_GRAFO(A,N,U)
  close(u)
  RETURN
 END SUBROUTINE
-!
-SUBROUTINE cell(rv,vr,cell_0)
- implicit none
- integer           :: i,j
- real, intent(in)  :: cell_0(6)
- real, intent(out) :: rv(3,3),vr(3,3)
- real              :: alp,bet
- real              :: cosa,cosb,cosg
- real              :: gam,sing
- real              :: pi,DEGTORAD
- pi = ACOS(-1.0)
- DEGTORAD=pi/180.0
- IF(cell_0(4) == 90.0) THEN
-   cosa = 0.0
- ELSE
-   ALP=cell_0(4)*degtorad
-   COSA=cos(ALP)
- ENDIF
- IF(cell_0(5) == 90.0) THEN
-   cosb = 0.0
- ELSE
-   bet = cell_0(5)*degtorad
-   cosb = cos(bet)
- ENDIF
- IF(cell_0(6) == 90.0) then
-   sing = 1.0
-   cosg = 0.0
- ELSE
-   gam = cell_0(6)*degtorad
-   sing = sin(gam)
-   cosg = cos(gam)
- ENDIF
- rv(1,1) = cell_0(1)
- rv(1,2) = cell_0(2)*cosg
- rv(1,3) = cell_0(3)*cosb
- rv(2,1) = 0.0
- rv(2,2) = cell_0(2)*sing
- rv(2,3) = cell_0(3)*(cosa - cosb*cosg)/sing
- rv(3,1) = 0.0
- rv(3,2) = 0.0
- rv(3,3) = sqrt( cell_0(3)*cell_0(3) - rv(1,3)*rv(1,3) - rv(2,3)*rv(2,3)) 
- call inverse(rv,vr,3)
-! print*,'Cell:'
-! WRITE(*,'(6F14.7)')( cell_0(j), j=1,6 )
-! print*,'Box:'
-! DO i=1,3
-!    WRITE(*,'(F14.7,F14.7,F14.7)')( rv(i,j), j=1,3 )
-! ENDDO
-! WRITE(*,*)'----------------------------------------'
-! WRITE(*,*)'bOX:'
-! DO i=1,3
-!    WRITE(*,'(F14.7,F14.7,F14.7)')( vr(i,j), j=1,3 )
-! ENDDO
- RETURN
-END SUBROUTINE cell
-!
-SUBROUTINE uncell(rv,cell_0)
-  implicit none
-  real,intent(out) :: cell_0(6)
-  real,intent(in)  :: rv(3,3)
-  integer  :: i,j
-  real     :: temp(6)
-  REAL :: radtodeg,PI
-  PI=ACOS(-1.0)
-  radtodeg=180.0/PI
-!
-  do i = 1,3
-    temp(i) = 0.0
-    do j = 1,3
-      temp(i) = temp(i) + rv(j,i)**2
-    enddo
-    temp(i) = sqrt(temp(i))
-  enddo
-  cell_0(1) = abs(temp(1))
-  cell_0(2) = abs(temp(2))
-  cell_0(3) = abs(temp(3))
-  do i = 1,3
-    temp(3+i) = 0.0
-  enddo
-  do j = 1,3
-    temp(4) = temp(4) + rv(j,2)*rv(j,3)
-    temp(5) = temp(5) + rv(j,1)*rv(j,3)
-    temp(6) = temp(6) + rv(j,1)*rv(j,2)
-  enddo
-  temp(4) = temp(4)/(temp(2)*temp(3))
-  temp(5) = temp(5)/(temp(1)*temp(3))
-  temp(6) = temp(6)/(temp(1)*temp(2))
-  cell_0(4) = radtodeg*acos(temp(4))
-  cell_0(5) = radtodeg*acos(temp(5))
-  cell_0(6) = radtodeg*acos(temp(6))
-!  Avoid round off errors for 90.0 and 120.0 degrees
-  DO i=4,6
-     if (abs(cell_0(i) - 90.0 ).lt.0.00001) cell_0(i) = 90.0
-     if (abs(cell_0(i) - 120.0).lt.0.00001) cell_0(i) = 120.0
-  ENDDO
-!
-  return
-end subroutine uncell
-!
-subroutine inverse(a,c,n)
-!============================================================
-! Inverse matrix
-! Method: Based on Doolittle LU factorization for Ax=b
-! Alex G. December 2009
-!-----------------------------------------------------------
-! input ...
-! a(n,n) - array of coefficients for matrix A
-! n      - dimension
-! output ...
-! c(n,n) - inverse matrix of A
-! comments ...
-! the original matrix a(n,n) will be destroyed 
-! during the calculation
-!===========================================================
- implicit none 
- integer n
- real a(n,n), c(n,n)
- real L(n,n), U(n,n), b(n), d(n), x(n)
- real coeff
- integer i, j, k
-! step 0: initialization for matrices L and U and b
-! Fortran 90/95 aloows such operations on matrices
- L=0.0
- U=0.0
- b=0.0
-! step 1: forward elimination
- do k=1, n-1
-   do i=k+1,n
-      coeff=a(i,k)/a(k,k)
-      L(i,k) = coeff
-      do j=k+1,n
-         a(i,j) = a(i,j)-coeff*a(k,j)
-      end do
-   end do
- end do
-! Step 2: prepare L and U matrices 
-! L matrix is a matrix of the elimination coefficient
-! + the diagonal elements are 1.0
- do i=1,n
-  L(i,i) = 1.0
- end do
-! U matrix is the upper triangular part of A
- do j=1,n
-  do i=1,j
-    U(i,j) = a(i,j)
-  end do
- end do
-!
-! Step 3: compute columns of the inverse matrix C
- do k=1,n
-  b(k)=1.0
-  d(1) = b(1)
-! Step 3a: Solve Ld=b using the forward substitution
-  do i=2,n
-    d(i)=b(i)
-    do j=1,i-1
-      d(i) = d(i) - L(i,j)*d(j)
-    end do
-  end do
-! Step 3b: Solve Ux=d using the back substitution
-  x(n)=d(n)/U(n,n)
-  do i = n-1,1,-1
-    x(i) = d(i)
-    do j=n,i+1,-1
-      x(i)=x(i)-U(i,j)*x(j)
-    end do
-    x(i) = x(i)/u(i,i)
-  end do
-! Step 3c: fill the solutions x(n) into column k of C
-  do i=1,n
-    c(i,k) = x(i)
-  end do
-  b(k)=0.0
- end do
- return
-END SUBROUTINE inverse
