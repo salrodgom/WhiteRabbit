@@ -8,10 +8,10 @@ OBJS =  vectors.o	\
 	cell.o
 #
 all:
-	${F90} -c vectors.f95
-	${F90} -c cell.f95
-	${F90} -c output.f95
-	${F90} -c main.f95
+	${F90} vectors.f95
+	${F90} cell.f95
+	${F90} output.f95
+	${F90} main.f95
 	${FOR} ${OBJS} -o White_Rabbit
 	${F90} cif2pdb.f95 -o Cheshire_Cat
 	${F90} histograms.f95 -o Queen_of_Hearts
