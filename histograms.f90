@@ -12,7 +12,7 @@ PROGRAM histogram
  fileopen: IF( IERR == 0) THEN
   read_: DO
     READ (111,'(A)',IOSTAT=IERR) line
-    IF( IERR /= 0 ) EXIT
+    IF( IERR /= 0 ) EXIT read_
     n_datos = n_datos + 1
   END DO read_
   REWIND( 111 )

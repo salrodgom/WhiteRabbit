@@ -15,8 +15,8 @@ PROGRAM CIFTOPDB
  OPEN(111,FILE='input.cif',STATUS='OLD',ACTION='READ',IOSTAT=IERR )
  WRITE(6,'(A6,I4)')'MODEL ',j
  j=0
- fileopen: IF( IERR == 0) THEN
-  DO
+ IF( IERR == 0) THEN
+  fileopen: DO
     READ (111,'(A)',IOSTAT=IERR) line
     IF (line(1:13)=='_cell_length_') THEN
       i=i+1
@@ -30,8 +30,8 @@ PROGRAM CIFTOPDB
       READ(line,'(35x,a10)') space
     ENDIF
     IF (line(1:)=='_atom_site_fract_z') EXIT fileopen
-  END DO
- ENDIF fileopen
+  END DO fileopen
+ ENDIF
  CALL cell(rv,vr,cell_0)
  WRITE(6,'(A6,3f9.3,3f7.2,1x,a10)') &
   'CRYST1',cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),space
