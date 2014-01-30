@@ -35,7 +35,7 @@ function remove_fake_rings {
 }
 # MAIN
 cd src
-  make
+  make all
   echo "======= Code compiled ======="
   mv White_Rabbit Alicia Cheshire_Cat Queen_of_Hearts The_Hatter ../.
   rm *.o *.mod
@@ -73,7 +73,7 @@ echo "White_Rabbit runing: Up the Rabbit Hole"
 ./White_Rabbit < _true
 for j in 4 6 8 ; do
     echo "Queen_of_Hearts runing for $j-histogram"
-    cat $j-distance.txt | awk '{print $3}' > input
+    cat $j-distance.txt | awk '{print $4}' > input
     ./Queen_of_Hearts > $j-histogram.txt
 done
 echo "[The Hatter] Discrete Fourier Transform of area(t) > hat(area)(w)"

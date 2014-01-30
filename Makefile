@@ -1,21 +1,30 @@
-#LINKFLAGS_FOR=-O -g -march=native
-FOR = gfortran
-LINKFLAGS_FOR=-O3
-F90  = ${FOR} ${LINKFLAGS_FOR} -c
+#LINKFLAGS_FOR=-O -g -march=native -fbounds-check
+F90  =  gfortran
+LINKFLAGS_FOR= -O3
+COMP_FOR  = ${F90} ${LINKFLAGS_FOR}
+COMP_FORc = ${COMP_FOR} -c
 OBJS =  vectors.o	\
+	cell.o		\
 	main.o		\
-        output.o	\
-	cell.o
-#
+        output.o
+COBJS = ${OBJS}		\
+	cif2pdb.o 	\
+	histograms.o	\
+	dft.o
+histograms:
+	${F90} ${LINKFLAGS_FOR} histograms.f95 -o Queen_of_Hearts
+loops:
+	g++ allocate.c funciones_aqui.c funciones_par.c flux.cpp -lm -lgsl -lgslcblas -o Alicia
+loops_dbg:
+	g++ allocate.c funciones_aqui.c funciones_par.c flux.cpp -lm -lgsl -lgslcblas -fbounds-check -o Alicia
 all:
-	${F90} vectors.f95
-	${F90} cell.f95
-	${F90} output.f95
-	${F90} main.f95
-	${FOR} ${OBJS} -o White_Rabbit
-	${F90} cif2pdb.f95 -o Cheshire_Cat
-	${F90} histograms.f95 -o Queen_of_Hearts
-	${F90} dft.f95 -o The_Hatter
+	${COMP_FORc} vectors.f95
+	${COMP_FORc} cell.f95
+	${COMP_FORc} output.f95
+	${COMP_FORc} main.f95
+	${F90} ${OBJS} -o White_Rabbit
+	${COMP_FOR} cif2pdb.f95 -o Cheshire_Cat
+	${COMP_FOR} histograms.f95 -o Queen_of_Hearts
+	${COMP_FOR} dft.f95 -o The_Hatter
 	g++ allocate.c funciones_aqui.c funciones_par.c flux.cpp -lm -lgsl -lgslcblas  -o Alicia
-clean:;         @rm -f $(OBJS) *.mod ; rm -f White_Rabbit Cheshire_Cat Queen_of_Hearts The_Hatter Alicia
-
+clean:; rm -f $(COBJS) *.mod ; rm -f Alicia Queen_of_Hearts Cheshire_Cat White_Rabbit The_Hatter

@@ -185,7 +185,8 @@ PROGRAM main
     IF (IERR/=0) EXIT read_coor_PDB          ! formatos de lectura para PDB 
        atomc = line(1:6)                     ! leemos
        mol   = line(18:20)
-       READ(line(7:11),*)  id(i)
+       id(i)=i
+!       READ(line(7:11),*)  id(i)
        READ(line(31:38),*) xinbox(1,id(i))
        READ(line(39:46),*) xinbox(2,id(i))
        READ(line(47:54),*) xinbox(3,id(i))
@@ -268,35 +269,35 @@ PROGRAM main
   END IF type_input_question
 ! {{ para calcular propiedades geometricas del grafo calculo primero la matriz de adyacencias adj }}
   make_graph: IF( FLAG.EQV..true. ) THEN
-    ALLOCATE(adj(1:n_atoms,1:n_atoms)      ,STAT=IERR)
-    IF(IERR/=0) STOP '[ERROR] variable adj sin alicatar en memoria.'
-    ALLOCATE(adj_char(1:n_atoms,1:n_atoms) ,STAT=IERR)
-    IF(IERR/=0) STOP '[ERROR] variable adj_char sin alicatar en memoria.'
-    ALLOCATE(O_ident(1:n_atoms)            ,STAT=IERR)
-    IF(IERR/=0) STOP '[ERROR] variable O_ident sin alicatar en memoria.'
-    pairs: DO i=1,n_atoms
-      DO j=i,n_atoms
-      adj(i,j)=0.0
-      adj_CHAR(i,j)=' '
-      IF(j/=i)THEN
-       FORALL ( k=1:3 )
-          atom(k)= xcryst(k,j)
-          ouratom(k) = xcryst(k,i)
-       END FORALL
+   ALLOCATE(adj(1:n_atoms,1:n_atoms)      ,STAT=IERR)
+   IF(IERR/=0) STOP '[ERROR] variable adj sin alicatar en memoria.'
+   ALLOCATE(adj_char(1:n_atoms,1:n_atoms) ,STAT=IERR)
+   IF(IERR/=0) STOP '[ERROR] variable adj_char sin alicatar en memoria.'
+   ALLOCATE(O_ident(1:n_atoms)            ,STAT=IERR)
+   IF(IERR/=0) STOP '[ERROR] variable O_ident sin alicatar en memoria.'
+   pairs: DO i=1,n_atoms
+     DO j=i,n_atoms
+     adj(i,j)=0.0
+     adj_CHAR(i,j)=' '
+     IF(j/=i)THEN
+      FORALL ( k=1:3 )
+         atom(k)= xcryst(k,j)
+         ouratom(k) = xcryst(k,i)
+      END FORALL
 ! {{ condicion de enlace en un par T-O 
-       call make_distances(.false.,cell_0,ouratom,atom,rv,dist_,r)
-       IF(r>=r1.AND.r<r2)THEN
-         adj(i,j)=1.0
-         adj_CHAR(I,J)='@'
-       ENDIF
-! }}
+      call make_distances(.false.,cell_0,ouratom,atom,rv,dist_,r)
+      IF(r>=r1.AND.r<r2)THEN
+        adj(i,j)=1.0
+        adj_CHAR(I,J)='@'
       ENDIF
-      adj(j,i)=adj(i,j)
-      adj_CHAR(J,I)=adj_CHAR(I,J)
-     ENDDO
-    ENDDO pairs
-    CALL write_grafo(adj,n_atoms,id,222)
-    CALL ESCRITURA_GRAFO(adj,n_atoms,123)
+! }}
+     ENDIF
+     adj(j,i)=adj(i,j)
+     adj_CHAR(J,I)=adj_CHAR(I,J)
+    ENDDO
+   ENDDO pairs
+   CALL write_grafo(adj,n_atoms,id,222)
+   CALL ESCRITURA_GRAFO(adj,n_atoms,123)
 ! {{ el siguiente bloque revida la conectividad de cada tetraedro, debe ser 4
 ! independiente del grupo espacial SPACE
    conectivity: DO i=1,n_atoms ! conectividad de los ATOM  ! k=4 y k=2    en zeolitas.
