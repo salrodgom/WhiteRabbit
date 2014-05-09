@@ -195,21 +195,6 @@ PROGRAM main
        average(j)=average(j)+xinbox(j,id(i))/real(n_atoms)
     END FORALL
    ENDDO read_coor_PDB
-! { metodo antiguo, hay errores cuando los valores solapan en el espacio de las columnas del fichero }}
-!   read_coor_PDB: DO i=1,n_atoms
-!    READ(100, '(A)', iostat = IERR ) line
-!    IF (IERR/=0) EXIT read_coor_PDB
-!    READ(line,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
-!     atomc,id(i),typ(1),mol,m,x1,x2,x3,q,r,typ(2)
-!    xinbox(1,id(i))=x1
-!    xinbox(2,id(i))=x2
-!    xinbox(3,id(i))=x3
-!    label(id(i),1)=typ(1)
-!    label(id(i),2)=typ(2)
-!    FORALL ( j = 1:3 )
-!       average(j)=average(j)+xinbox(j,id(i))/real(n_atoms)
-!    END FORALL
-!   ENDDO read_coor_PDB
    print_coor_PDB: DO i=1,n_atoms ! definimos las coordenadas cartesianas
     FORALL ( j=1:3 )
        xinbox(j,id(i)) = xinbox(j,id(i)) - average(j)
@@ -224,7 +209,6 @@ PROGRAM main
     typ(2)=label(id(i),2)
     WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
      atomc,id(i),typ(1),mol,m,x1,x2,x3,q,r,typ(2)
-    !WRITE(909,*) typ(1),typ(2),xcryst(1,id(i)),xcryst(2,id(i)),xcryst(3,id(i))
    ENDDO print_coor_PDB
    READ (100,'(A)') line
    WRITE(999,'(A)') line
@@ -316,6 +300,7 @@ PROGRAM main
   RING_PROPERTIES: IF (compute_distance) THEN
   n_ring=0
   distancias_4: do
+! 440 es 8-ring.txt  
     READ(440,*,IOSTAT=IERR)( fou_atoms(j), j=1,8 )
     IF(IERR/=0) EXIT distancias_4
     d(1:16)=0.0
@@ -329,7 +314,7 @@ PROGRAM main
     END FORALL elijo_pivote_8
     DO j=2,8
        pivoteo_8: FORALL ( k=1:3 )
-          atom(k)   = xcrys_in_ring(k,j)   
+          atom(k)   = xcrys_in_ring(k,j)   ! { atomo que cambia }
           ouratom(k)= xcrys_in_ring(k,j-1) ! { atomo pivote }
        END FORALL pivoteo_8
        CALL make_distances(.true.,cell_0,atom,ouratom,rv,dist_,r)
@@ -396,6 +381,7 @@ PROGRAM main
     b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
     a_ring=MAXVAL(e)
     delta_ring = 0.5*abs( b_ring - a_ring )
+    ! x1 es el area, en este caso
     WRITE(444,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_4
 ! }}
