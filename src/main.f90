@@ -69,7 +69,9 @@ PROGRAM main
       n_T = n_T + 1
       n_atoms = 0
     ENDIF
-    IF (line(1:2)=='Ge'.OR.line(1:2)=='Si'.OR.line(1:2)=='O ') n_atoms = n_atoms + 1
+    IF (line(1:2)=='Ge'.OR.line(1:2)=='Si'.OR.line(1:2)=='O '.or.&
+        line(1:2)=='AL'.OR.line(1:2)=='SI'.OR.line(1:2)=='O '.or.&
+        line(1:2)=='GE'.OR.line(1:2)=='NA'.OR.line(1:2)=='O2') n_atoms = n_atoms + 1
    END DO
   END IF fileopen_ARC
   REWIND( 101 )

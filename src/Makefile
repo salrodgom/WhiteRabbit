@@ -1,5 +1,5 @@
 LINKFLAGS_FOR=-O2 -march=native
-COMP_FOR = ifort
+COMP_FOR = gfortran
 OBJS =  vectors.o	\
 	main.o		\
 	cif2pdb.o	\

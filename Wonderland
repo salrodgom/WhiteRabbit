@@ -1,6 +1,6 @@
 #! /bin/bash
 # ver README
-type_=PDB
+type_=ARC
 FORMAT_INPUT=$( echo ${type_} )
 #
 function remove_fake_rings {
