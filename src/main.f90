@@ -217,12 +217,22 @@ PROGRAM main
 ! {{ procedimiento ante archivo ARC }}
   ELSE IF (input_type=='ARC') THEN
    READ(101,'(A)', iostat = IERR ) line
-   IF (IERR/=0) EXIT
-   WRITE(909,'(A5,i5)')'MODEL',p
-   READ (101,'(A)') line
-   READ (101,'(A)') line
-   READ (line,*) mol,cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6)
+   IF (IERR/=0) EXIT steps
+   do1: DO
+    IF(line(1:3)=='PBC')THEN
+      EXIT do1
+    ELSE
+      READ (101,'(A)') line
+    END IF
+   END DO do1
+   READ(line(6:13),*) cell_0(1)
+   READ(line(16:23),*)cell_0(2)
+   READ(line(26:33),*)cell_0(3)
+   READ(line(36:43),*)cell_0(4)
+   READ(line(46:53),*)cell_0(5)
+   READ(line(56:63),*)cell_0(6)
    CALL cell(rv,vr,cell_0)
+   WRITE(909,'(A5,i5)')'MODEL',p
    WRITE(909,'(A6,3f9.3,3f7.2,1x,a10)') &
     'CRYST1',cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
    read_coor_ARC: DO i=1,n_atoms
