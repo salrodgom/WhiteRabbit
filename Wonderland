@@ -48,7 +48,7 @@ if [ $FORMAT_INPUT == "CIF" ] ; then
    ./Cheshire_Cat > input.pdb
    FORMAT_INPUT=$( echo 'PDB' )
 fi # lee el input.cif
-if [ $FORMAT_INPUT == "CIF" ] ; then 
+if [ $FORMAT_INPUT == "ARC" ] ; then 
 #!BIOSYM archive 3
 #PBC=ON
    sed -i '/BIOSYM/d' input.arc
