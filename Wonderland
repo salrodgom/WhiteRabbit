@@ -88,6 +88,6 @@ for i in 8 ; do     # type win
     done
 done
 rm _* White_Rabbit Alicia Cheshire_Cat Queen_of_Hearts The_Hatter TIEMPO_ATOMS
-gnuplot < panels.gp
-mv loopines_grafo_exp.dat grafo* *.eps *.txt results
+#gnuplot < panels.gp
+mv loopines_grafo_exp.dat grafo* *.txt results
 exit 0
