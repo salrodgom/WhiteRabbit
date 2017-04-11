@@ -5,8 +5,8 @@ PROGRAM main
  IMPLICIT NONE
  INTEGER            :: n_atoms = 0
  INTEGER            :: n_T = 0
- REAL               :: r1  = 1.0
- REAL               :: r2  = 2.2
+ REAL               :: r1  = 1.70
+ REAL               :: r2  = 1.95
  INTEGER            :: IERR
  INTEGER            :: i,j,k,l,p,m,o,n_ring,n,h
  INTEGER            :: ei_atoms(16),six_atoms(14),fou_atoms(8)
@@ -106,16 +106,23 @@ PROGRAM main
  IF (compute_distance) OPEN(440,file='8-ring.txt' )
  steps: DO p=1,n_T
   type_input_question: IF(input_type=='PDB') THEN
-   READ (100,'(A)') line
-   WRITE(999,'(A)') line
-   READ (100,'(A)') line
-   READ (line,'(6x,3f9.3,3f7.2,1x,a10)') &
-    cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
-   spacegroup = "P1"
-   CALL cell(rv,vr,cell_0) ! crea la matriz H para cambios entre coordenadas y su inversa.
-   a_average = a_average + ((volume(rv))**(1.0/3.0))/real(n_T)
-   WRITE(999,'(A6,3f9.3,3f7.2,1x,a10)') &
+   cycle_do_1: do
+    read(100,'(A)') line
+    if(line(1:5)=="MODEL".or.line(1:6)=="REMARK")then
+     WRITE(999,'(A)') line
+     cycle cycle_do_1
+    end if
+    if(line(1:6)=="CRYST1") then
+     read(line,'(6x,3f9.3,3f7.2,1x,a10)') &
+     cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
+     spacegroup = "P1"
+     call cell(rv,vr,cell_0) ! crea la matriz H para cambios entre coordenadas y su inversa.
+     a_average = a_average + ((volume(rv))**(1.0/3.0))/real(n_T)
+     WRITE(999,'(A6,3f9.3,3f7.2,1x,a10)') &
     'CRYST1',cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
+     exit cycle_do_1
+    end if
+   end do cycle_do_1
    average(1)=0.0
    average(2)=0.0
    average(3)=0.0
@@ -185,14 +192,20 @@ PROGRAM main
    read_coor_PDB: DO i=1,n_atoms
     READ(100, '(A)', iostat = IERR ) line
     IF (IERR/=0) EXIT read_coor_PDB          ! formatos de lectura para PDB 
-       atomc = line(1:6)                     ! leemos
-       mol   = line(18:20)
-       READ(line(7:11),*)  id(i)
-       READ(line(31:38),*) xinbox(1,id(i))
-       READ(line(39:46),*) xinbox(2,id(i))
-       READ(line(47:54),*) xinbox(3,id(i))
-       label(id(i),1)= line(13:14)
-       label(id(i),2)= label(id(i),1)
+       !atomc = line(1:6)                     ! leemos
+       !mol   = line(18:20)
+       !READ(line(7:11),*)  id(i)
+       !id(i)=i
+       !READ(line(31:38),*) xinbox(1,id(i))
+       !READ(line(39:46),*) xinbox(2,id(i))
+       !READ(line(47:54),*) xinbox(3,id(i))
+       !label(id(i),1)= line(13:14)
+       !label(id(i),2)= label(id(i),1)
+     !ATOM      1   Al MOL             3.972   3.056   5.263  0.00  0.00    Al
+     !ATOM      1 Al   MOL             3.972   3.056   5.263  0.00  0.00          Al
+     !ATOM      1 Al1  UNK A   1       3.972   3.056   5.263  1.00  0.00          Al
+     read(line,*)atomc,id(i),label(i,1),mol,(xinbox(j,i),j=1,3),x1,x2,label(i,2)
+     id(i)=i
     FORALL ( j = 1:3 )
        average(j)=average(j)+xinbox(j,id(i))/real(n_atoms)
     END FORALL

@@ -44,7 +44,7 @@ CONTAINS
    INTEGER :: i
    suma=0.0
    do i = 1,k
-      histo(i) = count( data <= bound(i) .and. data > bound(i-1))
+      histo(i) = count( data <= bound(i) .and. data >= bound(i-1))
    enddo
    ave = SUM(histo)
    do i=1,k
