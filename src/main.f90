@@ -31,6 +31,7 @@ PROGRAM main
  CHARACTER (LEN=10) :: spacegroup = "P1"
  LOGICAL            :: compute_distance,FLAG_stop
  LOGICAL            :: FLAG = .true.
+ logical            :: match_flag = .false.
 ! INTEGER            :: CHUNK,NTHREADS,TID
  TYPE (vector)      :: o0,u,ou,v,ov
 !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(TID)
@@ -70,7 +71,8 @@ PROGRAM main
       n_atoms = 0
     ENDIF
     IF (line(1:2)=='Ge'.OR.line(1:2)=='Si'.OR.line(1:2)=='O '.or.&
-        line(1:2)=='AL'.OR.line(1:2)=='SI'.OR.line(1:2)=='O '.or.&
+        line(1:2)=='AL'.OR.line(1:2)=='SI'.OR.line(1:2)=='O1'.or.&
+        line(1:2)==' O'.or.&
         line(1:2)=='GE'.OR.line(1:2)=='NA'.OR.line(1:2)=='O2') n_atoms = n_atoms + 1
    END DO
   END IF fileopen_ARC
@@ -190,7 +192,8 @@ PROGRAM main
     IF (IERR/=0) EXIT read_coor_PDB          ! formatos de lectura para PDB 
        atomc = line(1:6)                     ! leemos
        mol   = line(18:20)
-       READ(line(7:11),*)  id(i)
+       !READ(line(7:11),*)  id(i)
+       id(i)=i
        READ(line(31:38),*) xinbox(1,id(i))
        READ(line(39:46),*) xinbox(2,id(i))
        READ(line(47:54),*) xinbox(3,id(i))
@@ -504,7 +507,7 @@ PROGRAM main
           atom(k)   = xcrys_in_ring(k,j)   
           ouratom(k)= xcrys_in_ring(k,j-1) ! { atomo pivote }
        end forall
-       CALL make_distances(.true.,cell_0,atom,ouratom,rv,dist_,r)
+       call make_distances(.true.,cell_0,atom,ouratom,rv,dist_,r)
        forall ( k=1:3 )
           xcrys_in_ring(k,j) = dist_(k)
        end forall
@@ -526,20 +529,21 @@ PROGRAM main
     o0%x= xinbox_in_ring(1,0)
     o0%y= xinbox_in_ring(2,0)
     o0%z= xinbox_in_ring(3,0)
-! {{ if el CG del anillo está a una distancia de un 
-    do j=1, n_atoms
-     do i=1,16
-      if(id(j)/=ei_atoms(j)) then
-       atom(1)=o0%x
-       atom(2)=o0%y
-       atom(3)=o0%z
-       ouratom(1)=xinbox(1,id(j))
-       ouratom(2)=xinbox(2,id(j))
-       ouratom(3)=xinbox(3,id(j))
-       if( DISTANCE(atom,ouratom,rv) <= 2.0 ) cycle distancias_8
-      end if
-     end do
-    end do
+    FORALL ( j=1:3 )
+     xcrys_in_ring(j,0) = vr(j,1)*o0%x+vr(j,2)*o0%y+vr(j,3)*o0%z
+    END FORALL
+    atomc='ATOM  '
+    typ(1)='Ne'
+    cm_center_ring_16: do j=1,n_atoms
+     forall (k=1:3)
+      atom(k)=xcrys_in_ring(k,0)
+      ouratom(k)=xcryst(k,id(j))
+     end forall 
+     call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
+     if ( r <= 2.2 ) cycle distancias_8
+    end do cm_center_ring_16
+    WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
+    atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
 !   }}
     x1=0.0 ! {{ partial window area }}
     area_16: DO j=1,16
@@ -621,22 +625,21 @@ PROGRAM main
     o0%x= xinbox_in_ring(1,0)
     o0%y= xinbox_in_ring(2,0)
     o0%z= xinbox_in_ring(3,0)
-! {{ if el CG del anillo está a una distancia de un 
-    do j=1, n_atoms
-     do i=1,20
-      if(id(j)/=ten_atoms(j)) then
-       atom(1)=o0%x
-       atom(2)=o0%y
-       atom(3)=o0%z
-       ouratom(1)=xinbox(1,id(j))
-       ouratom(2)=xinbox(2,id(j))
-       ouratom(3)=xinbox(3,id(j))
-       if( DISTANCE(atom,ouratom,rv) <= 4.0 ) cycle distancias_10
-      end if
-     end do
-    end do
-!   }}
-
+    FORALL ( j=1:3 )
+     xcrys_in_ring(j,0) = vr(j,1)*o0%x+vr(j,2)*o0%y+vr(j,3)*o0%z
+    END FORALL
+    atomc='ATOM  '
+    typ(1)='Xe'
+    cm_center_ring_20: do j=1,n_atoms
+     forall (k=1:3)
+      atom(k)=xcrys_in_ring(k,0)
+      ouratom(k)=xcryst(k,id(j))
+     end forall
+     call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
+     if ( r <= 3.6 ) cycle distancias_10
+    end do cm_center_ring_20
+    WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
+    atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
 !   }}
     x1=0.0 ! {{ partial window area }}
     area_20: DO j=1,20
