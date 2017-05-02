@@ -1,4 +1,4 @@
-LINKFLAGS_FOR=-O2 -march=native -fbounds-check
+LINKFLAGS_FOR=-O2 -march=native
 COMP_FOR = gfortran
 OBJS =  vectors.o	\
 	main.o		\
