@@ -5,18 +5,18 @@ PROGRAM main
  IMPLICIT NONE
  INTEGER            :: n_atoms = 0
  INTEGER            :: n_T = 0
- REAL               :: r1  = 1.70
- REAL               :: r2  = 1.95
+ REAL               :: r1  = 1.0
+ REAL               :: r2  = 2.2
  INTEGER            :: IERR
  INTEGER            :: i,j,k,l,p,m,o,n_ring,n,h
- INTEGER            :: ei_atoms(16),six_atoms(14),fou_atoms(8)
+ INTEGER            :: ei_atoms(16),six_atoms(14),fou_atoms(8),ten_atoms(20)
  REAL, PARAMETER    :: pi=ACOS(-1.0)
  REAL               :: atom(3),ouratom(3),dist,distance,a_ring,b_ring,delta,dist_(1:3),a_average
  REAL               :: cell_0(6),q,r,s,rv(3,3),vr(3,3),delta_ring,make_distance_car_cm,volume
  REAL               :: x1,x2,x3,average(3)!,centres(3,8),dist_(1:3)!,pointout_strgline(3)
  REAL               :: image(1:3,1:27)!,image_car(1:3,1:27),medio(1:3,1:27)
  REAL, ALLOCATABLE  :: xcryst(:,:),xinbox(:,:)
- REAL               :: xcrys_in_ring(1:3,0:16),xinbox_in_ring(1:3,0:16),d(1:16),d0(1:16),e(1:16)
+ REAL               :: xcrys_in_ring(1:3,0:20),xinbox_in_ring(1:3,0:20),d(1:20),d0(1:20),e(1:20)
  INTEGER, ALLOCATABLE  :: id(:),adj(:,:),O_ident(:)
  CHARACTER (LEN=1), ALLOCATABLE :: adj_char(:,:)
  CHARACTER (LEN=3)  :: input_type = "PDB"
@@ -101,28 +101,23 @@ PROGRAM main
  IF (compute_distance) OPEN(888,file='8-distance.txt')
  IF (compute_distance) OPEN(666,file='6-distance.txt')
  IF (compute_distance) OPEN(444,file='4-distance.txt')
+ IF (compute_distance) OPEN(382,file='10-distance.txt')
+ if (compute_distance) open(220,file='20-ring.txt')
  IF (compute_distance) OPEN(880,file='16-ring.txt')
  IF (compute_distance) OPEN(660,file='12-ring.txt')
  IF (compute_distance) OPEN(440,file='8-ring.txt' )
  steps: DO p=1,n_T
   type_input_question: IF(input_type=='PDB') THEN
-   cycle_do_1: do
-    read(100,'(A)') line
-    if(line(1:5)=="MODEL".or.line(1:6)=="REMARK")then
-     WRITE(999,'(A)') line
-     cycle cycle_do_1
-    end if
-    if(line(1:6)=="CRYST1") then
-     read(line,'(6x,3f9.3,3f7.2,1x,a10)') &
-     cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
-     spacegroup = "P1"
-     call cell(rv,vr,cell_0) ! crea la matriz H para cambios entre coordenadas y su inversa.
-     a_average = a_average + ((volume(rv))**(1.0/3.0))/real(n_T)
-     WRITE(999,'(A6,3f9.3,3f7.2,1x,a10)') &
+   READ (100,'(A)') line
+   WRITE(999,'(A)') line
+   READ (100,'(A)') line
+   READ (line,'(6x,3f9.3,3f7.2,1x,a10)') &
+    cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
+   spacegroup = "P1"
+   CALL cell(rv,vr,cell_0) ! crea la matriz H para cambios entre coordenadas y su inversa.
+   a_average = a_average + ((volume(rv))**(1.0/3.0))/real(n_T)
+   WRITE(999,'(A6,3f9.3,3f7.2,1x,a10)') &
     'CRYST1',cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),spacegroup
-     exit cycle_do_1
-    end if
-   end do cycle_do_1
    average(1)=0.0
    average(2)=0.0
    average(3)=0.0
@@ -191,21 +186,16 @@ PROGRAM main
 !  1 -  6         Record name      "ENDMDL"
    read_coor_PDB: DO i=1,n_atoms
     READ(100, '(A)', iostat = IERR ) line
+    IF(line(1:6)=='ENDMDL') exit read_coor_PDB
     IF (IERR/=0) EXIT read_coor_PDB          ! formatos de lectura para PDB 
-       !atomc = line(1:6)                     ! leemos
-       !mol   = line(18:20)
-       !READ(line(7:11),*)  id(i)
-       !id(i)=i
-       !READ(line(31:38),*) xinbox(1,id(i))
-       !READ(line(39:46),*) xinbox(2,id(i))
-       !READ(line(47:54),*) xinbox(3,id(i))
-       !label(id(i),1)= line(13:14)
-       !label(id(i),2)= label(id(i),1)
-     !ATOM      1   Al MOL             3.972   3.056   5.263  0.00  0.00    Al
-     !ATOM      1 Al   MOL             3.972   3.056   5.263  0.00  0.00          Al
-     !ATOM      1 Al1  UNK A   1       3.972   3.056   5.263  1.00  0.00          Al
-     read(line,*)atomc,id(i),label(i,1),mol,(xinbox(j,i),j=1,3),x1,x2,label(i,2)
-     id(i)=i
+       atomc = line(1:6)                     ! leemos
+       mol   = line(18:20)
+       READ(line(7:11),*)  id(i)
+       READ(line(31:38),*) xinbox(1,id(i))
+       READ(line(39:46),*) xinbox(2,id(i))
+       READ(line(47:54),*) xinbox(3,id(i))
+       label(id(i),1)= line(13:14)
+       label(id(i),2)= label(id(i),1)
     FORALL ( j = 1:3 )
        average(j)=average(j)+xinbox(j,id(i))/real(n_atoms)
     END FORALL
@@ -222,8 +212,9 @@ PROGRAM main
     x3=xinbox(3,id(i))
     typ(1)=label(id(i),1)
     typ(2)=label(id(i),2)
+!ATOM      1 Ge   MOL  ****       0.331  -6.716 -14.604******  0.00  Ge
     WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
-     atomc,id(i),typ(1),mol,m,x1,x2,x3,q,r,typ(2)
+     atomc,id(i),typ(1),mol,0,x1,x2,x3,0.0,0.0,typ(2)
    ENDDO print_coor_PDB
    READ (100,'(A)') line
    WRITE(999,'(A)') line
@@ -535,6 +526,20 @@ PROGRAM main
     o0%x= xinbox_in_ring(1,0)
     o0%y= xinbox_in_ring(2,0)
     o0%z= xinbox_in_ring(3,0)
+! {{ if el CG del anillo está a una distancia de un 
+    do j=1, n_atoms
+     do i=1,16
+      if(id(j)/=ei_atoms(j)) then
+       atom(1)=o0%x
+       atom(2)=o0%y
+       atom(3)=o0%z
+       ouratom(1)=xinbox(1,id(j))
+       ouratom(2)=xinbox(2,id(j))
+       ouratom(3)=xinbox(3,id(j))
+       if( DISTANCE(atom,ouratom,rv) <= 2.0 ) cycle distancias_8
+      end if
+     end do
+    end do
 !   }}
     x1=0.0 ! {{ partial window area }}
     area_16: DO j=1,16
@@ -572,16 +577,119 @@ PROGRAM main
      b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
      a_ring=MAXVAL(e)
      delta_ring=0.5*abs(b_ring-a_ring)
-     WRITE(888,*)p,n_ring,b_ring,delta_ring,x1
+     WRITE(888,*)p,n_ring,b_ring,delta_ring,x1,a_ring
    ENDDO distancias_8
+!  
+! {{ calculo propiedades de los anillos de 20:
+   n_ring=0
+   distancias_10: do
+    d(1:20)  = 0.0
+    e(1:20)  = 0.0
+    d0(1:20) = 0.0
+    read(220,*,IOSTAT=IERR)( ten_atoms(j), j=1,20 )
+    IF(IERR/=0) EXIT distancias_10
+    n_ring=n_ring+1
+! {{ BLOQUE: minima distancia entre atomos opuestos
+! independiente de si empieza por T o por O.
+     forall ( k=1:3 , j=1:20 )
+       xcrys_in_ring(k,j) = xcryst(k,ten_atoms(j))
+     end forall
+     do j=2,20
+       forall ( k=1:3 )
+          atom(k)   = xcrys_in_ring(k,j)
+          ouratom(k)= xcrys_in_ring(k,j-1) ! { atomo pivote }
+       end forall
+       CALL make_distances(.true.,cell_0,atom,ouratom,rv,dist_,r)
+       forall ( k=1:3 )
+        xcrys_in_ring(k,j) = dist_(k)
+       end forall
+     end do
+! {{ paso a coordenadas cartesianas
+     FORALL ( i=1:20, j=1:3 )
+       xinbox_in_ring(j,i) = rv(j,1)*xcrys_in_ring(1,i)+rv(j,2)*xcrys_in_ring(2,i)+rv(j,3)*xcrys_in_ring(3,i)
+     END FORALL
+! }}
+!   {{ calculo el centro geometrico del anillo
+    x1=0.0
+    DO j=1,3
+       x1=0.0
+       DO l=1,20
+          x1=x1+xinbox_in_ring(j,l)/20.0
+       ENDDO
+       xinbox_in_ring(j,0)=x1
+    ENDDO
+    o0%x= xinbox_in_ring(1,0)
+    o0%y= xinbox_in_ring(2,0)
+    o0%z= xinbox_in_ring(3,0)
+! {{ if el CG del anillo está a una distancia de un 
+    do j=1, n_atoms
+     do i=1,20
+      if(id(j)/=ten_atoms(j)) then
+       atom(1)=o0%x
+       atom(2)=o0%y
+       atom(3)=o0%z
+       ouratom(1)=xinbox(1,id(j))
+       ouratom(2)=xinbox(2,id(j))
+       ouratom(3)=xinbox(3,id(j))
+       if( DISTANCE(atom,ouratom,rv) <= 4.0 ) cycle distancias_10
+      end if
+     end do
+    end do
+!   }}
+
+!   }}
+    x1=0.0 ! {{ partial window area }}
+    area_20: DO j=1,20
+      l=j+1
+      IF (l>20) l=l-20
+      u%x= xinbox_in_ring(1,j)
+      u%y= xinbox_in_ring(2,j)
+      u%z= xinbox_in_ring(3,j)
+      v%x= xinbox_in_ring(1,l)
+      v%y= xinbox_in_ring(2,l)
+      v%z= xinbox_in_ring(3,l)
+      ou = vector_sub(u,o0)
+      ov = vector_sub(v,o0)
+      x1=x1+0.5*absvec(cross(ou,ov))
+    ENDDO area_20
+! {{
+    atom1_20: DO j=1,20
+      atom2_20: DO l=1,20
+       IF( (j/=l).and. &
+        ((label(ten_atoms(j),1)==" O  ".or.label(ten_atoms(j),1)=="O   ").and. &
+         (label(ten_atoms(l),1)==" O  ".or.label(ten_atoms(l),1)=="O   "))) THEN
+        FORALL ( k=1:3 )
+         atom(k)    = xcrys_in_ring(k,j) !xcryst(k,ei_atoms(j))
+         ouratom(k) = xcrys_in_ring(k,l) !xcryst(k,ei_atoms(l))
+        END FORALL
+        d0(l)=DISTANCE(atom,ouratom,rv)
+       ELSE
+        d0(l)=0.0
+       ENDIF
+      ENDDO atom2_20
+       d(j)=MAXVAL(d0) ! de cada vuelta cojo el diametor mas grande
+       e(j)=d(j)
+       IF(d(j)<=0.001) d(j)=9999.0
+     ENDDO atom1_20
+     limpia_20: DO j=17,20
+       d(j) = 9999.0
+     END DO limpia_20
+     b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
+     a_ring=MAXVAL(e)
+     delta_ring = 0.5*abs( a_ring - b_ring )
+     WRITE(382,*)p,n_ring,b_ring,delta_ring,x1
+   ENDDO distancias_10
 ! }}
 ! {{ rebobino los ficheros de los anillos }}
+   rewind ( 220 )
    REWIND ( 880 )
    REWIND ( 660 )
    REWIND ( 440 )
   ENDIF RING_PROPERTIES
  ENDDO steps
  IF (compute_distance)  CLOSE( 660 )
+ if (compute_distance)  close( 382 )
+ if (compute_distance)  close( 220 )
  IF (compute_distance)  CLOSE( 666 )
  IF (compute_distance)  CLOSE( 888 )
  IF (compute_distance)  CLOSE( 444 )
