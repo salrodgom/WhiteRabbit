@@ -104,10 +104,10 @@ PROGRAM main
  IF (compute_distance) OPEN(666,file='6-distance.txt')
  IF (compute_distance) OPEN(444,file='4-distance.txt')
  IF (compute_distance) OPEN(382,file='10-distance.txt')
- if (compute_distance) open(220,file='20-ring.txt')
- IF (compute_distance) OPEN(880,file='16-ring.txt')
- IF (compute_distance) OPEN(660,file='12-ring.txt')
- IF (compute_distance) OPEN(440,file='8-ring.txt' )
+ !if (compute_distance) open(220,file='20-ring.txt')
+ !IF (compute_distance) OPEN(880,file='16-ring.txt')
+ !IF (compute_distance) OPEN(660,file='12-ring.txt')
+ !IF (compute_distance) OPEN(440,file='8-ring.txt' )
  steps: DO p=1,n_T
   type_input_question: IF(input_type=='PDB') THEN
    READ (100,'(A)') line
@@ -319,9 +319,10 @@ PROGRAM main
   ENDIF make_graph
   RING_PROPERTIES: IF (compute_distance) THEN
   n_ring=0
+  open(440,file="8-ring.txt")
   distancias_4: do
-! 440 es 8-ring.txt  
-    READ(440,*,IOSTAT=IERR)( fou_atoms(j), j=1,8 )
+! 440 es 8-ring.txt
+    read(440,*,IOSTAT=IERR)( fou_atoms(j), j=1,8 )
     IF(IERR/=0) EXIT distancias_4
     d(1:16)=0.0
     d0(1:16)=0.0
@@ -404,8 +405,10 @@ PROGRAM main
     ! x1 es el area, en este caso
     WRITE(444,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_4
+   close(440)
 ! }}
 ! {{ propiedades de los anillos de 12.
+   open(660,file="12-ring.txt")
    n_ring=0
    distancias_6: do
     READ(660,*,IOSTAT=IERR)( six_atoms(j), j=1,12 )
@@ -487,15 +490,22 @@ PROGRAM main
      delta_ring = 0.5*abs( a_ring - b_ring )
      WRITE(666,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_6
+   close(660)
 ! }}
 ! {{ calculo propiedades de los anillos de 16.
+   if(p==1)then
+    open(880,file="16-ring.txt")
+    open(881,file="16-ring_corrected.txt")
+   else
+    open(880,file="16-ring_corrected.txt")
+   end if
    n_ring=0
    distancias_8: do
     d(1:16)  = 0.0
     e(1:16)  = 0.0
     d0(1:16) = 0.0
-    READ(880,*,IOSTAT=IERR)( ei_atoms(j), j=1,16 )
-    IF(IERR/=0) EXIT distancias_8
+    read(880,*,IOSTAT=IERR)( ei_atoms(j), j=1,16 )
+    if(IERR/=0) EXIT distancias_8
     n_ring=n_ring+1
 ! {{ BLOQUE: minima distancia entre atomos opuestos
 ! independiente de si empieza por T o por O.
@@ -532,18 +542,21 @@ PROGRAM main
     FORALL ( j=1:3 )
      xcrys_in_ring(j,0) = vr(j,1)*o0%x+vr(j,2)*o0%y+vr(j,3)*o0%z
     END FORALL
-    atomc='ATOM  '
-    typ(1)='Ne'
-    cm_center_ring_16: do j=1,n_atoms
-     forall (k=1:3)
-      atom(k)=xcrys_in_ring(k,0)
-      ouratom(k)=xcryst(k,id(j))
-     end forall 
-     call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
-     if ( r <= 2.2 ) cycle distancias_8
-    end do cm_center_ring_16
-    WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
-    atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
+    if(p==1)then
+     atomc='ATOM  '
+     typ(1)='Ne'
+     cm_center_ring_16: do j=1,n_atoms
+      forall (k=1:3)
+       atom(k)=xcrys_in_ring(k,0)
+       ouratom(k)=xcryst(k,id(j))
+      end forall 
+      call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
+      if ( r <= 2.2 ) cycle distancias_8
+     end do cm_center_ring_16
+     WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
+     atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
+     write(881,'(16(i5,1x))') ( ei_atoms(j), j=1,16 ) 
+    end if
 !   }}
     x1=0.0 ! {{ partial window area }}
     area_16: DO j=1,16
@@ -583,8 +596,16 @@ PROGRAM main
      delta_ring=0.5*abs(b_ring-a_ring)
      WRITE(888,*)p,n_ring,b_ring,delta_ring,x1,a_ring
    ENDDO distancias_8
+   if ( p==1 ) close(881)
+   close(880)
 !  
 ! {{ calculo propiedades de los anillos de 20:
+   if(p==1)then
+    open(220,file='20-ring.txt')
+    open(221,file='20-ring_corrected.txt')
+   else
+    open(220,file='20-ring_corrected.txt')
+   end if
    n_ring=0
    distancias_10: do
     d(1:20)  = 0.0
@@ -625,21 +646,24 @@ PROGRAM main
     o0%x= xinbox_in_ring(1,0)
     o0%y= xinbox_in_ring(2,0)
     o0%z= xinbox_in_ring(3,0)
-    FORALL ( j=1:3 )
+    forall ( j=1:3 )
      xcrys_in_ring(j,0) = vr(j,1)*o0%x+vr(j,2)*o0%y+vr(j,3)*o0%z
-    END FORALL
-    atomc='ATOM  '
-    typ(1)='Xe'
-    cm_center_ring_20: do j=1,n_atoms
-     forall (k=1:3)
-      atom(k)=xcrys_in_ring(k,0)
-      ouratom(k)=xcryst(k,id(j))
-     end forall
-     call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
-     if ( r <= 3.6 ) cycle distancias_10
-    end do cm_center_ring_20
-    WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
-    atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
+    end forall
+    if(p==1)then
+     atomc='ATOM  '
+     typ(1)='Xe'
+     cm_center_ring_20: do j=1,n_atoms
+      forall (k=1:3)
+       atom(k)=xcrys_in_ring(k,0)
+       ouratom(k)=xcryst(k,id(j))
+      end forall
+      call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
+      if ( r <= 3.6 ) cycle distancias_10
+     end do cm_center_ring_20
+     write(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
+     atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
+     write(221,'(20(i5,1x))') ( ten_atoms(j), j=1,20 )
+    end if
 !   }}
     x1=0.0 ! {{ partial window area }}
     area_20: DO j=1,20
@@ -682,22 +706,24 @@ PROGRAM main
      delta_ring = 0.5*abs( a_ring - b_ring )
      WRITE(382,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_10
+   if (p==1) close(221)
+   close(220)
 ! }}
 ! {{ rebobino los ficheros de los anillos }}
-   rewind ( 220 )
-   REWIND ( 880 )
-   REWIND ( 660 )
-   REWIND ( 440 )
+   !rewind ( 220 )
+   !REWIND ( 880 )
+   !REWIND ( 660 )
+   !REWIND ( 440 )
   ENDIF RING_PROPERTIES
  ENDDO steps
- IF (compute_distance)  CLOSE( 660 )
- if (compute_distance)  close( 382 )
- if (compute_distance)  close( 220 )
- IF (compute_distance)  CLOSE( 666 )
- IF (compute_distance)  CLOSE( 888 )
- IF (compute_distance)  CLOSE( 444 )
- IF (compute_distance)  CLOSE( 440 )
- IF (compute_distance)  CLOSE( 880 )
+ !IF (compute_distance)  CLOSE( 660 )
+ !if (compute_distance)  close( 382 )
+ !if (compute_distance)  close( 220 )
+ !IF (compute_distance)  CLOSE( 666 )
+ !IF (compute_distance)  CLOSE( 888 )
+ !IF (compute_distance)  CLOSE( 444 )
+ !IF (compute_distance)  CLOSE( 440 )
+ !IF (compute_distance)  CLOSE( 880 )
  CLOSE( 100 )
  CLOSE( 999 )
  CLOSE( 555 )

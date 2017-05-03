@@ -15,8 +15,6 @@ function remove_fake_rings {
      sed -i.bak "/ ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 10-ring.txt
      sed -i.bak "/ ${atom[${n_atom[1]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[4]}]} /d" 16-ring.txt
      sed -i.bak "/ ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 16-ring.txt
-     #sed -i.bak "/ ${atom[${n_atom[1]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[4]}]} /d" 20-ring.txt
-     #sed -i.bak "/ ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 20-ring.txt
      for h in 1 2 3 4 ; do let "n_atom[${h}]++" ; done
     done
   done < 8-ring.txt
