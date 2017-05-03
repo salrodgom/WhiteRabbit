@@ -11,6 +11,23 @@ MODULE vector_module
   REAL :: z
  END TYPE vector
  CONTAINS
+  type (vector) function vector_unitary(v1)
+   implicit none
+   type(vector), intent(in) :: v1
+   real                     :: norma
+   norma=absvec(v1) 
+   vector_unitary%x = v1%x/norma
+   vector_unitary%y = v1%y/norma
+   vector_unitary%z = v1%z/norma
+  end function vector_unitary
+  type (vector) function vector_scale(v1, r )
+   implicit none
+   type(vector), intent(in) :: v1
+   real,intent(in)          :: r
+   vector_scale%x = v1%x*r
+   vector_scale%y = v1%y*r
+   vector_scale%z = v1%z*r
+  end function vector_scale
 ! 
    TYPE (vector) FUNCTION vector_add (v1,v2)
     IMPLICIT NONE

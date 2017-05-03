@@ -16,7 +16,8 @@ PROGRAM main
  REAL               :: x1,x2,x3,average(3)!,centres(3,8),dist_(1:3)!,pointout_strgline(3)
  REAL               :: image(1:3,1:27)!,image_car(1:3,1:27),medio(1:3,1:27)
  REAL, ALLOCATABLE  :: xcryst(:,:),xinbox(:,:)
- REAL               :: xcrys_in_ring(1:3,0:20),xinbox_in_ring(1:3,0:20),d(1:20),d0(1:20),e(1:20)
+ REAL               :: xcrys_in_ring(1:3,0:20),xinbox_in_ring(1:3,0:20)!,d(1:20),d0(1:20),e(1:20)
+ real,allocatable   :: d(:),d0(:),e(:)
  INTEGER, ALLOCATABLE  :: id(:),adj(:,:),O_ident(:)
  CHARACTER (LEN=1), ALLOCATABLE :: adj_char(:,:)
  CHARACTER (LEN=3)  :: input_type = "PDB"
@@ -33,7 +34,7 @@ PROGRAM main
  LOGICAL            :: FLAG = .true.
  logical            :: match_flag = .false.
 ! INTEGER            :: CHUNK,NTHREADS,TID
- TYPE (vector)      :: o0,u,ou,v,ov
+ TYPE (vector)      :: o0,u,ou,v,ov,vv,uu
 !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(TID)
 ! TID=OMP_GET_THREAD_NUM()
 ! IF(TID==0)THEN
@@ -104,10 +105,6 @@ PROGRAM main
  IF (compute_distance) OPEN(666,file='6-distance.txt')
  IF (compute_distance) OPEN(444,file='4-distance.txt')
  IF (compute_distance) OPEN(382,file='10-distance.txt')
- !if (compute_distance) open(220,file='20-ring.txt')
- !IF (compute_distance) OPEN(880,file='16-ring.txt')
- !IF (compute_distance) OPEN(660,file='12-ring.txt')
- !IF (compute_distance) OPEN(440,file='8-ring.txt' )
  steps: DO p=1,n_T
   type_input_question: IF(input_type=='PDB') THEN
    READ (100,'(A)') line
@@ -310,7 +307,6 @@ PROGRAM main
         k=k+adj(i,j)
      ENDDO
      xcryst(0,i)=k
-!     IF(k/=0.0.and.k/=2.0.and.k/=4.0) WRITE(6,'(3A,I2)') '[OJO] Connectivity of ',label(i,1),'is ',k
    ENDDO conectivity
    WRITE(6,'(A)')'[loops] Connectivity between nodes [Degree]:'
    IF(compute_distance.eqv..false.) WRITE(*,'(1000(I1))')(int(xcryst(0,k)),k=1,n_atoms)
@@ -320,13 +316,13 @@ PROGRAM main
   RING_PROPERTIES: IF (compute_distance) THEN
   n_ring=0
   open(440,file="8-ring.txt")
+  allocate( d(1:8), d0(1:8), e(1:8) )
   distancias_4: do
-! 440 es 8-ring.txt
     read(440,*,IOSTAT=IERR)( fou_atoms(j), j=1,8 )
     IF(IERR/=0) EXIT distancias_4
-    d(1:16)=0.0
-    d0(1:16)=0.0
-    e(1:16)=0.0
+    d=0.0
+    d0=0.0
+    e=0.0
     n_ring=n_ring+1
 ! {{ coloco todos los atomos en el mismo sistema de referencia y calculo
 ! las distancias sin PBC }}
@@ -405,17 +401,19 @@ PROGRAM main
     ! x1 es el area, en este caso
     WRITE(444,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_4
+   deallocate( d,d0,e )
    close(440)
 ! }}
 ! {{ propiedades de los anillos de 12.
+   allocate( d(1:12), d0(1:12), e(1:12) )
    open(660,file="12-ring.txt")
    n_ring=0
    distancias_6: do
     READ(660,*,IOSTAT=IERR)( six_atoms(j), j=1,12 )
     IF(IERR/=0) EXIT distancias_6
-    d(1:16)=0.0
-    e(1:16)=0.0
-    d0(1:16)=0.0
+    d=0.0
+    e=0.0
+    d0=0.0
     n_ring=n_ring+1
     elijo_pivote_12: FORALL ( k=1:3 , j=1:12 )
        xcrys_in_ring(k,j) = xcryst(k,six_atoms(j))
@@ -490,6 +488,7 @@ PROGRAM main
      delta_ring = 0.5*abs( a_ring - b_ring )
      WRITE(666,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_6
+   deallocate( d, d0, e )
    close(660)
 ! }}
 ! {{ calculo propiedades de los anillos de 16.
@@ -500,12 +499,13 @@ PROGRAM main
     open(880,file="16-ring_corrected.txt")
    end if
    n_ring=0
+   allocate( d(1:16), d0(1:16), e(1:16 ))
    distancias_8: do
-    d(1:16)  = 0.0
-    e(1:16)  = 0.0
-    d0(1:16) = 0.0
     read(880,*,IOSTAT=IERR)( ei_atoms(j), j=1,16 )
     if(IERR/=0) EXIT distancias_8
+    d=0.0
+    d0=0.0
+    e=0.0
     n_ring=n_ring+1
 ! {{ BLOQUE: minima distancia entre atomos opuestos
 ! independiente de si empieza por T o por O.
@@ -539,9 +539,9 @@ PROGRAM main
     o0%x= xinbox_in_ring(1,0)
     o0%y= xinbox_in_ring(2,0)
     o0%z= xinbox_in_ring(3,0)
-    FORALL ( j=1:3 )
+    forall ( j=1:3 )
      xcrys_in_ring(j,0) = vr(j,1)*o0%x+vr(j,2)*o0%y+vr(j,3)*o0%z
-    END FORALL
+    end forall
     if(p==1)then
      atomc='ATOM  '
      typ(1)='Ne'
@@ -551,13 +551,17 @@ PROGRAM main
        ouratom(k)=xcryst(k,id(j))
       end forall 
       call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
-      if ( r <= 2.2 ) cycle distancias_8
+      if ( r <= 2.35 ) cycle distancias_8 
      end do cm_center_ring_16
-     WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
-     atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
-     write(881,'(16(i5,1x))') ( ei_atoms(j), j=1,16 ) 
+     match_flag = .true.
+     !WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
+     !atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
+     !write(881,'(16(i5,1x))') ( ei_atoms(j), j=1,16 ) 
     end if
 !   }}
+    uu%x=0.0
+    uu%y=0.0
+    uu%z=0.0
     x1=0.0 ! {{ partial window area }}
     area_16: DO j=1,16
       l=j+1
@@ -570,35 +574,44 @@ PROGRAM main
       v%z= xinbox_in_ring(3,l)
       ou = vector_sub(u,o0)
       ov = vector_sub(v,o0)
-      x1=x1+0.5*absvec(cross(ou,ov))
+      uu = vector_add(uu,vector_unitary( cross(ou,ov) ))
+      x1=x1+0.5*absvec( cross(ou,ov) )
     ENDDO area_16
+    if( p==1 .and. match_flag .and. absvec( uu ) >= 10.0 ) then
+     WRITE(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
+      atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
+     write(881,'(16(i5,1x))') ( ei_atoms(j), j=1,16 )
+    end if
 ! }}
-     atom1_16: DO j=1,16
-       atom2_16: DO l=1,16
-         IF( (j/=l).and. &
-          ((label(ei_atoms(j),1)==" O  ".or.label(ei_atoms(j),1)=="O   ").and. &
-           (label(ei_atoms(l),1)==" O  ".or.label(ei_atoms(l),1)=="O   "))) THEN
-           FORALL (k=1:3)
-             atom(k)    = xcrys_in_ring(k,j) !xcryst(k,ei_atoms(j))
-             ouratom(k) = xcrys_in_ring(k,l) !xcryst(k,ei_atoms(l))
-           END FORALL
-           d0(l)=DISTANCE(atom,ouratom,rv) !CALL make_distances(PBC,cell_0,atom,ouratom,rv,dist_,r)
-         ELSE
-           d0(l)=0.00001
-         ENDIF
-       ENDDO atom2_16
-       d(j)=MAXVAL(d0) ! de cada vuelta cojo el diametor mas grande
-       e(j)=d(j)
-       IF(d(j)<=0.001) d(j)=9999.0
-     ENDDO atom1_16
-     b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
-     a_ring=MAXVAL(e)
-     delta_ring=0.5*abs(b_ring-a_ring)
-     WRITE(888,*)p,n_ring,b_ring,delta_ring,x1,a_ring
+    atom1_16: DO j=1,16
+      atom2_16: DO l=1,16
+        IF( (j/=l).and. &
+         ((label(ei_atoms(j),1)==" O  ".or.label(ei_atoms(j),1)=="O   ").and. &
+          (label(ei_atoms(l),1)==" O  ".or.label(ei_atoms(l),1)=="O   "))) THEN
+          FORALL (k=1:3)
+            atom(k)    = xcrys_in_ring(k,j) !xcryst(k,ei_atoms(j))
+            ouratom(k) = xcrys_in_ring(k,l) !xcryst(k,ei_atoms(l))
+          END FORALL
+          d0(l)=distance(atom,ouratom,rv) !CALL make_distances(PBC,cell_0,atom,ouratom,rv,dist_,r)
+        ELSE
+          d0(l)=0.0
+        ENDIF
+      ENDDO atom2_16
+      d(j)=MAXVAL(d0) ! de cada vuelta cojo el diametor mas grande
+      e(j)=d(j)
+      IF(d(j)<=0.001) d(j)=9999.0
+    ENDDO atom1_16
+    limpia_16: DO j=10,16
+      d(j) = 9999.0
+    END DO limpia_16
+    b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
+    a_ring=MAXVAL(e)
+    delta_ring=0.5*abs(b_ring-a_ring)
+    WRITE(888,*)p,n_ring,b_ring,delta_ring,x1,a_ring
    ENDDO distancias_8
    if ( p==1 ) close(881)
    close(880)
-!  
+   deallocate( d, d0, e )
 ! {{ calculo propiedades de los anillos de 20:
    if(p==1)then
     open(220,file='20-ring.txt')
@@ -607,10 +620,11 @@ PROGRAM main
     open(220,file='20-ring_corrected.txt')
    end if
    n_ring=0
+   allocate( d(1:20), d0(1:20), e(1:20) )
    distancias_10: do
-    d(1:20)  = 0.0
-    e(1:20)  = 0.0
-    d0(1:20) = 0.0
+    d = 0.0
+    e = 0.0
+    d0 = 0.0
     read(220,*,IOSTAT=IERR)( ten_atoms(j), j=1,20 )
     IF(IERR/=0) EXIT distancias_10
     n_ring=n_ring+1
@@ -658,7 +672,10 @@ PROGRAM main
        ouratom(k)=xcryst(k,id(j))
       end forall
       call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
-      if ( r <= 3.6 ) cycle distancias_10
+      if ( r <= 3.6 ) then
+       deallocate(d,d0,e)
+       cycle distancias_10
+      end if
      end do cm_center_ring_20
      write(999,'(a6,i5,1x,2(a4,1x),i4,4x,3f8.3,2f6.2,2X,a4)') &
      atomc,1,typ(1),mol,0,o0%x,o0%y,o0%z,0.0,0.0,typ(1)
@@ -706,14 +723,10 @@ PROGRAM main
      delta_ring = 0.5*abs( a_ring - b_ring )
      WRITE(382,*)p,n_ring,b_ring,delta_ring,x1
    ENDDO distancias_10
+   deallocate(d,d0,e)
    if (p==1) close(221)
    close(220)
 ! }}
-! {{ rebobino los ficheros de los anillos }}
-   !rewind ( 220 )
-   !REWIND ( 880 )
-   !REWIND ( 660 )
-   !REWIND ( 440 )
   ENDIF RING_PROPERTIES
  ENDDO steps
  !IF (compute_distance)  CLOSE( 660 )

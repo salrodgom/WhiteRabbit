@@ -4,7 +4,21 @@ FORMAT_INPUT=$( echo ${type_} )
 function remove_fake_rings {
   echo "Removing fake-rings [ This may take a long time...]"
   while read line ; do
-# linea tipo: "7 55 15 48 20 56 14 47"
+    for i in $(seq 1 8) ; do
+       atom[$i]=$(echo $line | awk '{print $'$i'}')
+    done
+    for i in 1 2 3 4 ; do n_atom[$i]=$i ; done
+    for j in $(seq 1 8) ; do
+     for h in 1 2 3 4 ; do if [ ${n_atom[${h}]} -eq 9 ] ; then n_atom[${h}]=1 ; fi ; done
+     sed -i.bak "/ ${atom[${n_atom[1]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[4]}]} /d" 16-ring.txt
+     sed -i.bak "/ ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 16-ring.txt
+     for h in 1 2 3 4 ; do let "n_atom[${h}]++" ; done
+    done
+  done < 8-ring.txt
+}
+function remove_fake_rings_2 {
+  echo "Removing fake-rings [ This may take a long time...]"
+  while read line ; do
     for i in $(seq 1 8) ; do
        atom[$i]=$(echo $line | awk '{print $'$i'}')
     done
@@ -87,7 +101,7 @@ for j in 16 20 ; do           # tipo de anillo
     cat _tmp1 | sed '/simemtrizar/d' | sed '/vectores/d' | sed '/faltan/d' |sed '/borrar/d' > _tmp2
     mv _tmp2 $j-ring.txt
 done
-#remove_fake_rings
+remove_fake_rings
 echo "White_Rabbit runing: Up the Rabbit Hole"
 ./White_Rabbit < _true
 for j in 8 10 ; do
