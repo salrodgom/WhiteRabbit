@@ -1,19 +1,32 @@
 PROGRAM CIFTOPDB
  IMPLICIT NONE
- INTEGER            :: IERR,i,j,k
+ INTEGER            :: IERR,i,j,k,l
  INTEGER            :: n_atoms = 0
  INTEGER            :: n_T = 0
  REAL               :: cell_0(6),rv(3,3),vr(3,3),q,r
  REAL               :: crystal_r(3),cart_r(3)
  CHARACTER (LEN=80) :: line
- CHARACTER (LEN=2 ) :: label(2)
- CHARACTER (LEN=10) :: space = 'P1'
+ CHARACTER (LEN=5 ) :: label(2)
+ CHARACTER (LEN=10) :: space = " P1      "
  CHARACTER (LEN=30) :: charac
+ integer            :: n_atoms_type,model
+ integer            :: id(100,10000) = 0
+ real               :: coordinate_cart(100,3,10000) = 0.0
+ integer            :: histogram_atom_type(100)
+ character (len=5)  :: atoms_type_max_label(100)
+ atoms_type_max_label = 'Xx'
+ n_atoms_type         = 0
+ !open(101,file='input',IOSTAT=IERR,STATUS='OLD',ACTION='READ')
+ !if(ierr/=0)then
+ model=1
+ !else
+ ! read(101,*) model
+ !end if
+ !close(101)
 !
- j=1
  i=0
  OPEN(111,FILE='input.cif',STATUS='OLD',ACTION='READ',IOSTAT=IERR )
- WRITE(6,'(A6,I4)')'MODEL ',j
+ WRITE(6,'(A6,I4)')'MODEL ',model
  j=0
  fileopen: IF( IERR == 0) THEN
   read_: DO
@@ -29,28 +42,68 @@ PROGRAM CIFTOPDB
     IF (line(1:15)=='_symmetry_space') THEN
       READ(line,'(35x,a10)') space
     ENDIF
-    IF (line(1:)=='_atom_site_fract_z') EXIT read_
+    IF (line(1:)=='_atom_site_occupancy') EXIT read_
   END DO read_
  ENDIF fileopen
  CALL cell(rv,vr,cell_0)
- WRITE(6,'(A6,3f9.3,3f7.2,1x,a10)') &
-  'CRYST1',cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6),space
  i=0
  q=0.0
  r=0.0
- atoms: DO
+ read_atoms: DO
   i=i+1
-  READ (111,'(A)',IOSTAT=IERR) line
-  IF (IERR/=0) EXIT atoms
-  READ(line,*) label(1),crystal_r(1),crystal_r(2),crystal_r(3)
-  DO j=1,3
-     crystal_r(j)=MOD(crystal_r(j)+100.0,1.0)
-     cart_r(j) = rv(j,1)*crystal_r(1) + rv(j,2)*crystal_r(2) + rv(j,3)*crystal_r(3)
-  END DO
-  WRITE(6,'(a6,i5,1x,2(a4,1x),4x,4x,3f8.3,2f6.2,2X,a4)') &
-   'ATOM  ',i,label(1),'MOL ',cart_r(1),cart_r(2),cart_r(3),q,r,label(1)
- END DO atoms
- REWIND( 111 )
+  read (111,'(A)',iostat=IERR) line
+  IF (IERR/=0) exit read_atoms
+  READ(line,*)label(1),label(2),(crystal_r(j),j=1,3),q,space,r
+  if(label(1)(1:2)=="sh") cycle read_atoms
+  label(1)=label(2)
+  n_atoms = n_atoms + 1
+  do j=1,3
+   crystal_r(j)=MOD(crystal_r(j)+100.0,1.0)
+   cart_r(j) = rv(j,1)*crystal_r(1) + rv(j,2)*crystal_r(2) + rv(j,3)*crystal_r(3)
+  end do
+  if(n_atoms_type==0)then
+   n_atoms_type=1
+   atoms_type_max_label(1)=label(2)
+   histogram_atom_type(1)=1
+   id(1,1)=i
+   do j=1,3
+    coordinate_cart(1,j,i)=cart_r(j)
+   end do
+   cycle read_atoms
+  end if
+  do j=1,n_atoms_type
+   if(label(2)==atoms_type_max_label(j))then
+    histogram_atom_type(j)=histogram_atom_type(j)+1
+    do k=1,3
+     coordinate_cart(j,k,i)=cart_r(k)
+    end do
+    id(j,histogram_atom_type(j))=i
+    cycle read_atoms
+   end if
+  end do
+  n_atoms_type=n_atoms_type+1
+  atoms_type_max_label(n_atoms_type)=label(2)
+  histogram_atom_type(n_atoms_type)=1
+  do k=1,3
+   coordinate_cart(n_atoms_type,k,i)=cart_r(k)
+  end do
+  id(n_atoms_type,1)=i
+ END DO read_atoms 
+ write(6,'(a6,1x,a11,1x,i5)') 'REMARK','Atoms type:', n_atoms_type
+ write(6,'(a6,1x,999(a5,1x))')'REMARK',(atoms_type_max_label(j),j=1,n_atoms_type)
+ write(6,'(a6,1x,999(i5,1x))')'REMARK',(histogram_atom_type(j),j=1,n_atoms_type)
+ WRITE(6,'(A6,3f9.3,3f7.2)') &
+  'CRYST1',cell_0(1),cell_0(2),cell_0(3),cell_0(4),cell_0(5),cell_0(6)
+ i=0
+ do k=1,n_atoms_type
+   do j=1,histogram_atom_type(k)
+    i=i+1
+    label(1)=atoms_type_max_label(k)
+    label(2)=atoms_type_max_label(k)
+    WRITE(6,'(a6,i5,1x,2(a4,1x),4x,4x,3f8.3,2f6.2,10x,a4)') &
+    'ATOM  ',i,label(1),'MOL ',(coordinate_cart(k,l,id(k,j)),l=1,3),0.0,0.0,label(1)
+   end do
+ end do
  WRITE(6,'(A6)')'ENDMDL'
 END PROGRAM
 !

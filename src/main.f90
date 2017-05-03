@@ -673,7 +673,6 @@ PROGRAM main
       end forall
       call make_distances(.false.,cell_0,atom,ouratom,rv,dist_,r)
       if ( r <= 3.6 ) then
-       deallocate(d,d0,e)
        cycle distancias_10
       end if
      end do cm_center_ring_20
