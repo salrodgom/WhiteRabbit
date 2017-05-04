@@ -122,7 +122,6 @@ done
 #        rm input out
 #    done
 #done
-rm _* White_Rabbit Alicia Cheshire_Cat Queen_of_Hearts The_Hatter TIEMPO_ATOMS
-#gnuplot < panels.gp
+rm _* White_Rabbit Alicia Cheshire_Cat Queen_of_Hearts The_Hatter TIEMPO_ATOMS input
 mv loopines_grafo_exp.dat grafo* *.txt results
 exit 0

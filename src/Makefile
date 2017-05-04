@@ -1,4 +1,4 @@
-LINKFLAGS_FOR=-O2 -march=native -fbounds-check
+LINKFLAGS_FOR=-O2 -march=native
 COMP_FOR = gfortran
 OBJS =  vectors.o	\
 	main.o		\
@@ -16,4 +16,5 @@ all:
 	${COMP_FOR} ${LINKFLAGS_FOR} histograms.f90 -o Queen_of_Hearts
 	${COMP_FOR} ${LINKFLAGS_FOR} dft.f90 -o The_Hatter
 	g++ allocate.c funciones_aqui.c funciones_par.c flux.cpp -lm -lgsl -lgslcblas  -o Alicia
-clean:;         @rm -f *.mod *.o White_Rabbit Cheshire_Cat Queen_of_Hearts The_Hatter Alicia
+clean:
+	@rm -f *.mod *.o White_Rabbit Cheshire_Cat Queen_of_Hearts The_Hatter Alicia
