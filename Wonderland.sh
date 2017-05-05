@@ -16,59 +16,6 @@ function remove_fake_rings {
     done
   done < 8-ring.txt
 }
-function remove_fake_rings_2 {
-  echo "Removing fake-rings [ This may take a long time...]"
-  while read line ; do
-    for i in $(seq 1 8) ; do
-       atom[$i]=$(echo $line | awk '{print $'$i'}')
-    done
-    for i in 1 2 3 4 ; do n_atom[$i]=$i ; done
-    for j in $(seq 1 8) ; do
-     for h in 1 2 3 4 ; do if [ ${n_atom[${h}]} -eq 9 ] ; then n_atom[${h}]=1 ; fi ; done
-     sed -i.bak "/ ${atom[${n_atom[1]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[4]}]} /d" 10-ring.txt
-     sed -i.bak "/ ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 10-ring.txt
-     sed -i.bak "/ ${atom[${n_atom[1]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[4]}]} /d" 16-ring.txt
-     sed -i.bak "/ ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 16-ring.txt
-     for h in 1 2 3 4 ; do let "n_atom[${h}]++" ; done
-    done
-  done < 8-ring.txt
-#
-  while read line ; do
-    for i in $(seq 1 10) ; do
-       atom[$i]=$(echo $line | awk '{print $'$i'}')
-    done
-    for i in $(seq 1 7) ; do n_atom[$i]=$i ; done
-    for j in $(seq 1 10) ; do
-     for h in $(seq 1 7) ; do if [ ${n_atom[${h}]} -eq 9 ] ; then n_atom[${h}]=1 ; fi ; done
-     sed -i.bak "/ ${atom[${n_atom[1]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[4]}]} ${atom[${n_atom[5]}]} ${atom[${n_atom[6]}]} ${atom[${n_atom[7]}]} /d" 20-ring.txt
-     sed -i.bak "/ ${atom[${n_atom[7]}]} ${atom[${n_atom[6]}]} ${atom[${n_atom[5]}]} ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 20-ring.txt
-     for h in $(seq 1 10) ; do let "n_atom[${h}]++" ; done
-    done
-  done < 10-ring.txt
-#
- while read line ; do
-    for i in 1 2 3 4 ; do n_atom[$i]=$i ; done
-    for j in $(seq 1 10) ; do
-     for h in 1 2 3 4 ; do if [ ${n_atom[${h}]} -eq 9 ] ; then n_atom[${h}]=1 ; fi ; done
-     sed -i.bak "/ ${atom[${n_atom[1]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[4]}]} /d" 16-ring.txt
-     sed -i.bak "/ ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 16-ring.txt
-     for h in 1 2 3 4 ; do let "n_atom[${h}]++" ; done
-    done
-  done < 10-ring.txt
-  while read line ; do
-    for i in $(seq 1 10) ; do
-       atom[$i]=$(echo $line | awk '{print $'$i'}')
-    done
-    for i in 1 2 3 4 ; do n_atom[$i]=$i ; done
-    for j in $(seq 1 10) ; do
-     for h in 1 2 3 4 ; do if [ ${n_atom[${h}]} -eq 9 ] ; then n_atom[${h}]=1 ; fi ; done
-     sed -i.bak "/ ${atom[${n_atom[1]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[4]}]} /d" 20-ring.txt
-     sed -i.bak "/ ${atom[${n_atom[4]}]} ${atom[${n_atom[3]}]} ${atom[${n_atom[2]}]} ${atom[${n_atom[1]}]} /d" 20-ring.txt
-     for h in 1 2 3 4 ; do let "n_atom[${h}]++" ; done
-    done
-  done < 16-ring.txt
-  rm *ring*.bak
-}
 # main:
 cd src
   make
@@ -95,16 +42,16 @@ echo '.true.'  > _true
 echo $FORMAT_INPUT >> _true
 echo "White_Rabbit runing: Down the Rabbit Hole"
 ./White_Rabbit < _false
-for j in 16 20 ; do           # tipo de anillo
+for j in 8 12 16 20 ; do           # tipo de anillo
     echo "Alicia runing for $j-ring"
     ./Alicia 10 2 grafo $j 1 > _tmp1
     cat _tmp1 | sed '/simemtrizar/d' | sed '/vectores/d' | sed '/faltan/d' |sed '/borrar/d' > _tmp2
     mv _tmp2 $j-ring.txt
 done
-remove_fake_rings
+#remove_fake_rings
 echo "White_Rabbit runing: Up the Rabbit Hole"
 ./White_Rabbit < _true
-for j in 8 10 ; do
+for j in 4 6 8 10 ; do
     echo "Queen_of_Hearts runing for $j-histogram"
     cat $j-distance.txt | awk '{print $5}' > input
     ./Queen_of_Hearts > $j-histogram_area.txt

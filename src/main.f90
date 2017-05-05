@@ -392,7 +392,7 @@ PROGRAM main
      e(j)=d(j)
      IF(d(j)<=0.001) d(j)=9999.0
     ENDDO atom1_8
-    limpia_8: DO j=9,16 ! valores no validos de d.
+    limpia_8: DO j=5,8 ! valores no validos de d.
        d(j)=9999.0      ! los relleno con infinitos
     ENDDO limpia_8       
     b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
@@ -480,7 +480,7 @@ PROGRAM main
        e(j)=d(j)
        IF(d(j)<=0.001) d(j)=9999.0
      ENDDO atom1_12
-     limpia_12: DO j=13,16
+     limpia_12: DO j=7,12
        d(j) = 9999.0
      END DO limpia_12
      b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
