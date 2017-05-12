@@ -13,7 +13,7 @@ PROGRAM main
  REAL, PARAMETER    :: pi=ACOS(-1.0)
  REAL               :: atom(3),ouratom(3),dist,distance,a_ring,b_ring,delta,dist_(1:3),a_average
  REAL               :: cell_0(6),q,r,s,rv(3,3),vr(3,3),delta_ring,make_distance_car_cm,volume
- REAL               :: x1,x2,x3,average(3)!,centres(3,8),dist_(1:3)!,pointout_strgline(3)
+ REAL               :: x1,x2,x3,ratio,average(3)!,centres(3,8),dist_(1:3)!,pointout_strgline(3)
  REAL               :: image(1:3,1:27)!,image_car(1:3,1:27),medio(1:3,1:27)
  REAL, ALLOCATABLE  :: xcryst(:,:),xinbox(:,:)
  REAL               :: xcrys_in_ring(1:3,0:20),xinbox_in_ring(1:3,0:20)!,d(1:20),d0(1:20),e(1:20)
@@ -319,6 +319,10 @@ PROGRAM main
   allocate( d(1:8), d0(1:8), e(1:8) )
   distancias_4: do
     read(440,*,IOSTAT=IERR)( fou_atoms(j), j=1,8 )
+    ratio=0.0
+    do j=1,8
+     if( label(fou_atoms(j),1)=="Ge  " ) ratio=ratio+1
+    end do
     IF(IERR/=0) EXIT distancias_4
     d=0.0
     d0=0.0
@@ -399,7 +403,7 @@ PROGRAM main
     a_ring=MAXVAL(e)
     delta_ring = 0.5*abs( b_ring - a_ring )
     ! x1 es el area, en este caso
-    WRITE(444,*)p,n_ring,b_ring,delta_ring,x1
+    WRITE(444,*)p,n_ring,b_ring,delta_ring,x1,ratio
    ENDDO distancias_4
    deallocate( d,d0,e )
    close(440)
@@ -411,6 +415,10 @@ PROGRAM main
    distancias_6: do
     READ(660,*,IOSTAT=IERR)( six_atoms(j), j=1,12 )
     IF(IERR/=0) EXIT distancias_6
+    ratio=0
+    do j=1,12
+     if( label(six_atoms(j),1)=="Ge  " ) ratio=ratio+1
+    end do
     d=0.0
     e=0.0
     d0=0.0
@@ -486,7 +494,7 @@ PROGRAM main
      b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
      a_ring=MAXVAL(e)
      delta_ring = 0.5*abs( a_ring - b_ring )
-     WRITE(666,*)p,n_ring,b_ring,delta_ring,x1
+     WRITE(666,*)p,n_ring,b_ring,delta_ring,x1,ratio
    ENDDO distancias_6
    deallocate( d, d0, e )
    close(660)
@@ -503,6 +511,10 @@ PROGRAM main
    distancias_8: do
     read(880,*,IOSTAT=IERR)( ei_atoms(j), j=1,16 )
     if(IERR/=0) EXIT distancias_8
+    ratio=0
+    do j=1,16
+     if( label(ei_atoms(j),1)=="Ge  " ) ratio=ratio+1
+    end do
     d=0.0
     d0=0.0
     e=0.0
@@ -607,7 +619,7 @@ PROGRAM main
     b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
     a_ring=MAXVAL(e)
     delta_ring=0.5*abs(b_ring-a_ring)
-    WRITE(888,*)p,n_ring,b_ring,delta_ring,x1,a_ring
+    WRITE(888,*)p,n_ring,b_ring,delta_ring,x1,a_ring,ratio
    ENDDO distancias_8
    if ( p==1 ) close(881)
    close(880)
@@ -626,7 +638,11 @@ PROGRAM main
     e = 0.0
     d0 = 0.0
     read(220,*,IOSTAT=IERR)( ten_atoms(j), j=1,20 )
-    IF(IERR/=0) EXIT distancias_10
+    IF(IERR/=0) EXIT distancias_10 
+    ratio =0
+    do j=1,20
+     if( label(ten_atoms(j),1)=="Ge  " ) ratio=ratio+1
+    end do
     n_ring=n_ring+1
 ! {{ BLOQUE: minima distancia entre atomos opuestos
 ! independiente de si empieza por T o por O.
@@ -720,7 +736,7 @@ PROGRAM main
      b_ring=MINVAL(d) ! de los diametros calculados cojo el mas pequeño
      a_ring=MAXVAL(e)
      delta_ring = 0.5*abs( a_ring - b_ring )
-     WRITE(382,*)p,n_ring,b_ring,delta_ring,x1
+     WRITE(382,*)p,n_ring,b_ring,delta_ring,x1,ratio
    ENDDO distancias_10
    deallocate(d,d0,e)
    if (p==1) close(221)
