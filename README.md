@@ -1,4 +1,4 @@
-# white_rabbit
+# White Rabbit
 To analyse the degree of distortions, windows apperture of zeolite windows from CAR or PDB files.
 # Graphics:
 STW zeolite with 8-membered and 10-membered rings marked with white and pink spheres, respectively.
