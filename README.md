@@ -1,4 +1,4 @@
-# White Rabbit
+# White Rabbit: Detection and geometrical analysis of rings and pores in mesoporous materials
 To analyse the degree of distortions, windows apperture of zeolite windows from CAR or PDB files.
 The algorithm automatically detects the rings of the structures and performs statistics on them: area, distortions, ellipticities and characteristic distances.
 
